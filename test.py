@@ -19,6 +19,6 @@ def trials2events(events, messages, remove_time_fields = True):
 
 if __name__ == '__main__':
     import edfread
-    events, messages = edfread.fread('SUB001.EDF', ignore_samples=True)
+    events, messages = edfread.fread('12.EDF', ignore_samples=True)
     edfread.trials2events(events, messages)
     print events

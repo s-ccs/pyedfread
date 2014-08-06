@@ -108,7 +108,8 @@ def fread(filename, ignore_samples = False, filter = []):
             elif data['message'].startswith('DRIFTCORRECT'):
                 current_messages['DRIFTCORRECT'] = data['message']
             elif data['message'].startswith('METATR'):
-                msg, key, value = data['message'].split(' ')
+                parts = data['message'].split(' ')
+                msg, key, value = parts[0], parts[1], str(parts[2:])
                 current_messages[key + '_message_send_time'] = data['start']
                 try: 
                     current_messages[key] = string.atof(value[:-1])

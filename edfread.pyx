@@ -41,7 +41,12 @@ cdef extern from "edf.h":
     int edf_get_element_count(EDFFILE *ef)
     int edf_close_file(EDFFILE *ef)
 
-def trials2events(events, messages, remove_time_fields = True):
+def remove_time_fields(events):
+    for key in events.fieldnames():
+        if '_send_time' in key:
+            events.rm_field(key)
+
+def trials2events(events, messages):
     for key in messages.fieldnames():
         if key == 'trial':
             continue

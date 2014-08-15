@@ -21,4 +21,6 @@ if __name__ == '__main__':
     import edfread
     events, messages = edfread.fread('12.EDF', ignore_samples=True)
     edfread.trials2events(events, messages)
+    events = events[ (events.cat==12) ]
     print events
+    print np.unique(events.condition)

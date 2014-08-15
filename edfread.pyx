@@ -19,6 +19,8 @@ try:
 except ImportError:
     progressbar = None
 
+progressbar = None
+
 type2label = {STARTFIX:'fixation', STARTSACC:'saccade',STARTBLINK:'blink',
         ENDFIX:'fixation', ENDSACC: 'saccade', ENDBLINK: 'blink',
         MESSAGEEVENT:'message'}
@@ -74,7 +76,6 @@ def fread(filename, ignore_samples = False, filter = []):
         bar = progressbar.ProgressBar(maxval=num_elements).start()
         cnt = 0
     trial = 0
-    
     while True:
         sample_type = edf_get_next_data(ef)
         data = data2dict(sample_type, ef)
@@ -109,12 +110,17 @@ def fread(filename, ignore_samples = False, filter = []):
                 current_messages['DRIFTCORRECT'] = data['message']
             elif data['message'].startswith('METATR'):
                 parts = data['message'].split(' ')
-                msg, key, value = parts[0], parts[1], str(parts[2:])
+                msg, key = parts[0], parts[1] 
+                if len(parts) == 3:
+                    value = parts[2].strip().replace('\x00','')
+                else:
+                    value = str(parts[2:])
                 current_messages[key + '_message_send_time'] = data['start']
                 try: 
-                    current_messages[key] = string.atof(value[:-1])
-                except ValueError:
-                    current_messages[key] = value[:-1]
+                    current_messages[key] = string.atof(value)
+                except (TypeError, ValueError):
+                    current_messages[key] = value
+
         if sample_type == NO_PENDING_ITEMS:
             edf_close_file(ef)
             break

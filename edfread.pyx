@@ -43,7 +43,7 @@ cdef extern from "edf.h":
 
 def remove_time_fields(events):
     for key in events.fieldnames():
-        if '_send_time' in key:
+        if 'message_send_time' in key:
             events.rm_field(key)
 
 def trials2events(events, messages):

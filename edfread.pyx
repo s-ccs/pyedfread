@@ -62,7 +62,7 @@ def trials2events(events, messages):
     
 
 def fread(filename, ignore_samples = False, filter = []):
-    cdef int errval
+    cdef int errval = 1
     cdef char* buf = <char*> malloc(1024*sizeof(char)) 
     cdef int* ef
     cdef int sample_type
@@ -75,6 +75,10 @@ def fread(filename, ignore_samples = False, filter = []):
     sample_accumulator = SampleAccumulator()
 
     ef = edf_open_file(filename, 0, 1, 1, &errval)
+    if errval<0:
+        print filename, ' could not be openend.'
+        import sys
+        sys.exit(-1)
     e = edf_get_preamble_text(ef, buf, 1024)
     num_elements = edf_get_element_count(ef)
     if progressbar is not None:

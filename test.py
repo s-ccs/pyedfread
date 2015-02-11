@@ -19,8 +19,11 @@ def trials2events(events, messages, remove_time_fields = True):
 
 if __name__ == '__main__':
     import edfread
-    events, messages = edfread.fread('/home/nwilming/u/headfixed/EDFs/SUB001.EDF', ignore_samples=True)
-    edfread.trials2events(events, messages)
-    events = events[ (events.cat==12) ]
+    #events, messages = edfread.fread('/home/nwilming/u/headfixed/EDFs/SUB001.EDF', ignore_samples=True)
+    events, messages = edfread.fread('/home/nwilming/Schreibtisch/SUB099.EDF', ignore_samples=True, filter=['GLOVE1'])
+
+    #edfread.trials2events(events, messages)
+    #events = events[ (events.cat==12) ]
     print events
-    print np.unique(events.condition)
+    print messages
+    #print np.unique(events.condition)

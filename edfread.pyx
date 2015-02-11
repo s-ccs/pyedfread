@@ -58,7 +58,15 @@ def trials2events(events, messages):
         for key in messages.fieldnames():
             if key == 'trial':
                 continue
-            events.field(key)[idt] = messages.field(key)[trial]
+            try:
+                events.field(key)[idt] = messages.field(key)[trial]
+            except ValueError:
+                raise RuntimeError(
+'''
+Can not assign trial metadata to fixations. The trial metadata probably
+contains an array, e.g. more than one value per trial. In this case I 
+don't know how to assign these values to fixations.
+''')
     
 
 def fread(filename, ignore_samples = False, filter = []):
@@ -129,6 +137,26 @@ def fread(filename, ignore_samples = False, filter = []):
                     current_messages[key] = string.atof(value)
                 except (TypeError, ValueError):
                     current_messages[key] = value
+            else:
+                # These are messageevents that accumulate during a fixation.
+                # I treat them as key value pairs
+                msg = data['message'].strip().replace('\x00','').split(' ')
+                if (len(msg) == 1) or not (msg[0] in filter):
+                    continue
+                try:
+                    value = [string.atof(v) for v in msg[1:]]
+                except ValueError:
+                    value = msg[1:]
+
+                if len(msg) > 2:
+                    key, value = msg[0], value 
+                elif len(msg) == 2:
+                    key, value = msg[0], value[0]
+                if key not in current_messages.keys():
+                    current_messages[key] = []
+                    current_messages[key+'_time'] = [] 
+                current_messages[key].append(value)
+                current_messages[key+'_time'].append(data['start'])
 
         if sample_type == NO_PENDING_ITEMS:
             edf_close_file(ef)

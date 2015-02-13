@@ -117,8 +117,9 @@ def fread(filename, ignore_samples = False, filter = []):
 
         if sample_type == MESSAGEEVENT:
             if data['message'].startswith('TRIALID'):
-                current_messages['trial'] = trial
-                message_accumulator.update(current_messages)
+                if (trial > 0) and (len(current_messages.keys()) > 0):
+                    current_messages['trial'] = trial
+                    message_accumulator.update(current_messages)
                 trial +=1
                 current_messages = {}
             elif data['message'].startswith('SYNCTIME'):
@@ -159,6 +160,8 @@ def fread(filename, ignore_samples = False, filter = []):
                 current_messages[key+'_time'].append(data['start'])
 
         if sample_type == NO_PENDING_ITEMS:
+            if len(current_messages.keys())>0:
+                message_accumulator.update(current_messages)
             edf_close_file(ef)
             break
         if progressbar is not None:

@@ -26,4 +26,5 @@ if __name__ == '__main__':
     #events = events[ (events.cat==12) ]
     print events
     print messages
+    print messages.image
     #print np.unique(events.condition)

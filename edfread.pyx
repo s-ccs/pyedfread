@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Reads SR Research EDF files and parses them into ocupy datamats.
+Reads SR Research EDF files and parses them into ocupy datamats. 
 '''
+
 from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 from libc.stdlib cimport malloc, free
 
@@ -41,12 +42,31 @@ cdef extern from "edf.h":
     int edf_get_element_count(EDFFILE *ef)
     int edf_close_file(EDFFILE *ef)
 
+
 def remove_time_fields(events):
     for key in events.fieldnames():
         if 'message_send_time' in key:
             events.rm_field(key)
 
 def trials2events(events, messages):
+    '''
+    Matches trial meta information to individual events (e.g. fixations/saccades).
+
+    The events structure is a datamat with length #events (fixations/saccades) and
+    must contain a field named 'trial'. This field is then used
+    to copy the meta data from the messages datamat to each events. E.g. the trial field
+    in the events structure needs to match the 'trial' field in the messages structure.
+    The messages datamat contains for each trial (len(messages) == number of trials), 
+    fields of the messages datamat contain the meta data.
+
+    There are two cases that will throw this method off track. 
+    1) If the messages datamat contains fields with multiple values per trial, it is
+       hard to know how to assign these values to events during a trial. I opted
+       to not assign them to each event.
+    2) If a trial is encoded with something that can not be compared (e.g. nan). 
+       NAN values will be ignored whith complaints. Other values hopefully lead to an
+       error.
+    '''
     for key in messages.fieldnames():
         if key == 'trial':
             continue
@@ -55,11 +75,12 @@ def trials2events(events, messages):
                 dtype=messages.field(key).dtype))
     for trial in np.unique(messages.field('trial')):
         idt = events.trial ==  trial
+        idm = messages.trial == trial
         for key in messages.fieldnames():
             if key == 'trial':
                 continue
             try:
-                events.field(key)[idt] = messages.field(key)[trial]
+                events.field(key)[idt] = messages.field(key)[idm]
             except ValueError:
                 raise RuntimeError(
 '''
@@ -67,9 +88,38 @@ Can not assign trial metadata to fixations. The trial metadata probably
 contains an array, e.g. more than one value per trial. In this case I 
 don't know how to assign these values to fixations.
 ''')
+            except IndexError as e:
+                if np.isnan(trial):
+                    print 'Data without valid trial ID encountered (%s = %s), ignoring'%(key, str(trial))
+                else:
+                    raise RuntimeError('''
+Can not match trial ID %s to trial'''%trial)
+                
     
 
-def fread(filename, ignore_samples = False, filter = []):
+def fread(filename,
+    ignore_samples = False, 
+    filter=[], 
+    split_char=' ',
+    properties_filter=['type','time','sttime',
+                'entime','gx','gy','gstx','gsty','genx','geny',
+                'gxvel','gyvel','start','end', 'gavx', 'gavy']):
+    '''
+    Read an EDF file into a datamat.
+
+    ingnore_samples : If true individual samples will not be saved, but only event averages.
+    filter : List of strings.
+        The SR system allows to send trial meta data messages into the data stream. This function
+        decides which messages to keep by checking if the message string is in this filter list.
+        Messages are split by 'split_char' and the first part of the message is checked against
+        the filter list. Example: 
+            Message is "beep_150" and split_char = '_' -> (beep, 150)
+            Message is "beep 150" and split_char = ' ' -> (beep, 150)
+    split_char : Character used to split metadata messages.
+    properties_filter : Determines which event properties to read from the EDF. Corresponds to
+        fieldnames of the underlying c structs. For a list see data2dict in this file and the
+        EDF acces API.
+    '''
     cdef int errval = 1
     cdef char* buf = <char*> malloc(1024*sizeof(char)) 
     cdef int* ef
@@ -95,7 +145,7 @@ def fread(filename, ignore_samples = False, filter = []):
     trial = 0
     while True:
         sample_type = edf_get_next_data(ef)
-        data = data2dict(sample_type, ef)
+        data = data2dict(sample_type, ef, filter=properties_filter)
         if (sample_type == STARTFIX) or (sample_type == STARTSACC): 
             current_event = data
             current_event['trial']=trial
@@ -141,7 +191,7 @@ def fread(filename, ignore_samples = False, filter = []):
             else:
                 # These are messageevents that accumulate during a fixation.
                 # I treat them as key value pairs
-                msg = data['message'].strip().replace('\x00','').split(' ')
+                msg = data['message'].strip().replace('\x00','').split(split_char)
                 if (len(msg) == 1) or not (msg[0] in filter):
                     continue
                 try:
@@ -177,6 +227,9 @@ def fread(filename, ignore_samples = False, filter = []):
 cdef data2dict(sample_type, int* ef, filter=['type','time','sttime',
                 'entime','gx','gy','gstx','gsty','genx','geny',
                 'gxvel','gyvel','start','end', 'gavx', 'gavy']):
+    '''
+    Converts a EDF sample to a dictionary.
+    '''
     fd = edf_get_float_data(ef)
     cdef char *msg
     d = None

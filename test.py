@@ -1,30 +1,7 @@
 import numpy as np
-
-def trials2events(events, messages, remove_time_fields = True):
-    for key in messages.fieldnames():
-        if key == 'trial':
-            continue
-        events.add_field(key, 
-                np.empty(events.field(events.fieldnames()[0]).shape,
-                dtype=messages.field(key).dtype))
-    for trial in np.unique(messages.field('trial')):
-        idt = events.trial ==  trial
-        for key in messages.fieldnames():
-            if key == 'trial':
-                continue
-            events.field(key)[idt] = messages.field(key)[trial]
-    
-
-
+import edfread
 
 if __name__ == '__main__':
-    import edfread
-    #events, messages = edfread.fread('/home/nwilming/u/headfixed/EDFs/SUB001.EDF', ignore_samples=True)
-    events, messages = edfread.fread('/home/nwilming/Schreibtisch/SUB099.EDF', ignore_samples=True, filter=['GLOVE1'])
-
-    #edfread.trials2events(events, messages)
-    #events = events[ (events.cat==12) ]
-    print events
-    print messages
-    print messages.image
-    #print np.unique(events.condition)
+    events, messages = edfread.fread('SUB001.EDF', ignore_samples=True)
+    edfread.trials2events(events, messages)
+    events.save('sub001.datamat')

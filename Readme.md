@@ -47,7 +47,7 @@ From python
 After compilation run the following lines for a quick test.
 
     >>> import edf
-    >>> events, messages = edfread.pread('SUB001.EDF', ignore_samples=True)
+    >>> events, messages = edf.pread('SUB001.EDF', ignore_samples=True)
 
 This opens SUB001.EDF and parses it into two DataFrames:
 
@@ -68,13 +68,13 @@ field condition with value 1 for each trial to the messages structure. Of course
 if the value varies across trials this will be reflected in the messages
 structure. This is what it looks like in python code:
 
-	>>> events, messages = edfread.fread('SUB001.EDF', ignore_samples=True, filter=['condition'])
+	>>> events, messages = edf.pread('SUB001.EDF', ignore_samples=True, filter=['condition'])
 
 You can also specify which properties of the eye tracking data you pull out. If
 you want, for example, only the pupil and the gaze x position you can set the
 'properties_filter' of the edfread.fread / edf.pread method:
 
-	>>> events, messages = edfread.fread('SUB001.EDF',
+	>>> events, messages = edf.pread('SUB001.EDF',
 										 ignore_samples=True,
 										 properties_filter=['gx', 'pa'])
 

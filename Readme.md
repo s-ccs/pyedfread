@@ -82,12 +82,12 @@ To see how properties are named check the data2dict function in edfread.pyx and
 the edf acces api documentation (2.1.1 FSAMPLE Structure + 2.1.2 FEVENT Struct.).
 Some examples:
 
-  time - time point where event occured
-  type - event type
-  eye - eye: 0=left, 1=right
-  start - start time
-  end - end time
-  gavx, gavy -  average gaze locatio
+ - time - time point where event occured
+ - type - event type
+ - eye - eye: 0=left, 1=right
+ - start - start time
+ - end - end time
+ - gavx, gavy -  average gaze locatio
 
 
 Command line

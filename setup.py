@@ -16,7 +16,7 @@ from Cython.Build import cythonize
 import numpy
 
 if not 'darwin' in sys.platform:
-    args = {'include_dirs':[numpy.get_include(), 
+    args = {'include_dirs':[numpy.get_include(),
            'include/'],
         'library_dirs':['lib/'],
         'libraries':['edfapi'],
@@ -24,26 +24,26 @@ if not 'darwin' in sys.platform:
         'extra_link_args':['-fopenmp']}
 
     ext_module = Extension(
-        "edfread", 
+        "edfread",
         ['edfread.pyx'],
         **args
     )
     ext_data = Extension(
-        "edf_data", 
+        "edf_data",
         ['edf_data.pyx'],
         **args
     )
 else:
     args = {'include_dirs':[numpy.get_include(), '/Library/Frameworks/edfapi.framework/Headers'],
-        'extra_link_args':['-framework', 'edfapi']}
+        'extra_link_args':['-framework', 'edfapi'], 'extra_compile_args':["-w"]}
 
     ext_module = Extension(
-        "edfread", 
+        "edfread",
         ['edfread.pyx'],
         **args
     )
     ext_data = Extension(
-        "edf_data", 
+        "edf_data",
         ['edf_data.pyx'],
         **args
     )

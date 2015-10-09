@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
 Define SR Research structures used in the EDF.
-'''
-
+''' 
 
 from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 
 cdef extern from 'edf_data.h':
     ctypedef struct FSAMPLE:
-        uint32_t time  # time of sample		 
-        float px[2] 
-        float py[2] # pupil xy 
+        uint32_t time  # time of sample
+        float px[2]
+        float py[2] # pupil xy
         float hx[2]
-        float hy[2] # headref xy 
-        float pa[2] # pupil size or area 
+        float hy[2] # headref xy
+        float pa[2] # pupil size or area
         float gx[2]
-        float gy[2] # screen gaze xy 
+        float gy[2] # screen gaze xy
         float rx
-        float ry # screen pixels per degree 
-       
+        float ry # screen pixels per degree
+
         float gxvel[2]
         float gyvel[2]
         float hxvel[2]
@@ -35,12 +34,12 @@ cdef extern from 'edf_data.h':
 
         int16_t  hdata[8] # head-tracker data (not prescaled)
         uint16_t flags #flags to indicate contents
-        uint16_t input #extra (input word) 
-        uint16_t buttons # button state & changes 
+        uint16_t input #extra (input word)
+        uint16_t buttons # button state & changes
         int16_t  htype #head-tracker data type
         int16_t errors #process error flags
 
-    ctypedef struct LSTRING: 
+    ctypedef struct LSTRING:
         int16_t len
         char c
 
@@ -93,7 +92,7 @@ cdef extern from 'edf_data.h':
         char record_type # 1 = SAMPLES, 2= EVENTS, 3= SAMPLES and EVENT
         char pupil_type	# 0 = AREA, 1 = DIAMETE
         char recording_mode # 0 = PUPIL, 1 = CR
-        char filter_type # 1,2,3	
+        char filter_type # 1,2,3
         char  pos_type #PARSEDBY_GAZE  PARSEDBY_HREF PARSEDBY_PUPI
         char eye # 1=LEFT, 2=RIGHT, 3=LEFT and RIGHT
 
@@ -103,5 +102,3 @@ cdef extern from 'edf_data.h':
         IOEVENT   io
         FSAMPLE   fs
         RECORDINGS rec
-
-

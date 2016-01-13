@@ -173,7 +173,6 @@ def fread(filename,
                     current_messages[key] = []
                     current_messages[key+'_time'] = []
                 current_messages[key].append(value)
-                print key, value
                 current_messages[key+'_time'].append(data['start'])
 
         if sample_type == NO_PENDING_ITEMS:

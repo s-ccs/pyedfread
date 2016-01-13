@@ -70,13 +70,15 @@ structure. This is what it looks like in python code:
 
 	>>> events, messages = edf.pread('SUB001.EDF', ignore_samples=True, filter=['condition'])
 
+If filter='all', pyedfread saves all messages it can parse.
+
 You can also specify which properties of the eye tracking data you pull out. If
 you want, for example, only the pupil and the gaze x position you can set the
 'properties_filter' of the edfread.fread / edf.pread method:
 
 	>>> events, messages = edf.pread('SUB001.EDF',
-										 ignore_samples=True,
-										 properties_filter=['gx', 'pa'])
+					 ignore_samples=True,
+	        			 properties_filter=['gx', 'pa'])
 
 To see how properties are named check the data2dict function in edfread.pyx and
 the edf acces api documentation (2.1.1 FSAMPLE Structure + 2.1.2 FEVENT Struct.).
@@ -87,7 +89,7 @@ Some examples:
  - eye - eye: 0=left, 1=right
  - start - start time
  - end - end time
- - gavx, gavy -  average gaze locatio
+ - gavx, gavy -  average gaze location
 
 
 Command line

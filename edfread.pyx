@@ -42,6 +42,14 @@ cdef extern from "edf.h":
     int edf_get_element_count(EDFFILE * ef)
     int edf_close_file(EDFFILE * ef)
 
+def unbox_messages(current):
+    for key in current.keys():
+        try:
+            if len(current[key])==1:
+                current[key] = current[key][0]
+        except TypeError:
+            pass
+    return current
 
 def fread(filename,
           ignore_samples=False,
@@ -119,13 +127,17 @@ def fread(filename,
             if data['message'].startswith('TRIALID'):
                 if (trial > 0) and (len(current_messages.keys()) > 0):
                     current_messages['trial'] = trial
-                    message_accumulator.append(current_messages)
+                    message_accumulator.append(unbox_messages(current_messages))
                 trial += 1
                 current_messages = {}
+
             elif data['message'].startswith('SYNCTIME'):
-                current_messages['SYNCTIME'] = data['time']
+                current_messages['SYNCTIME'] = data['start']
+                current_messages['SYNCTIME_start'] = data['start']
+
             elif data['message'].startswith('DRIFTCORRECT'):
                 current_messages['DRIFTCORRECT'] = data['message']
+
             elif data['message'].startswith('METATR'):
                 parts = data['message'].split(' ')
                 msg, key = parts[0], parts[1]
@@ -142,26 +154,32 @@ def fread(filename,
                 # These are messageevents that accumulate during a fixation.
                 # I treat them as key value pairs
                 msg = data['message'].strip().replace('\x00', '').split(split_char)
-                if (len(msg) == 1) or not (msg[0] in filter):
-                    continue
+                if not filter == 'all':
+                    if msg[0] not in filter:
+                        continue
                 try:
                     value = [string.atof(v) for v in msg[1:]]
                 except ValueError:
                     value = msg[1:]
 
-                if len(msg) > 2:
-                    key, value = msg[0], value
+                if len(msg) == 1:
+                    key, value = msg[0], np.nan
                 elif len(msg) == 2:
                     key, value = msg[0], value[0]
+                elif len(msg) > 2:
+                    key, value = msg[0], value
+
                 if key not in current_messages.keys():
                     current_messages[key] = []
                     current_messages[key+'_time'] = []
                 current_messages[key].append(value)
+                print key, value
                 current_messages[key+'_time'].append(data['start'])
 
         if sample_type == NO_PENDING_ITEMS:
             if len(current_messages.keys()) > 0:
-                message_accumulator.append(current_messages)
+                current_messages['trial'] = trial
+                message_accumulator.append(unbox_messages(current_messages))
             edf_close_file(ef)
             break
         if progressbar is not None:
@@ -193,6 +211,7 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
        (sample_type == ENDBLINK) or
        (sample_type == MESSAGEEVENT)):
         message = ''
+
         if <int>fd.fe.message != 0:
             msg = &fd.fe.message.c
             message = msg[:fd.fe.message.len]
@@ -210,7 +229,6 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
              'evel': fd.fe.evel, 'supd_x': fd.fe.supd_x, 'eupd_x': fd.fe.eupd_x,
              'eye': fd.fe.eye, 'buttons': fd.fe.buttons, 'message': message,
              }
-
     if sample_type == SAMPLE_TYPE:
         d = {'time': fd.fs.time,
              'px': (fd.fs.px[0], fd.fs.px[1]),
@@ -235,10 +253,12 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
              'frxvel': (fd.fs.frxvel[0], fd.fs.frxvel[1]),
              'fryvel': (fd.fs.fryvel[0], fd.fs.fryvel[1])
              }
+
     if d is None:
         return d
     rd = {}
     for key, val in d.iteritems():
+
         if key in filter + ['message']:
             rd[key] = val
     return rd

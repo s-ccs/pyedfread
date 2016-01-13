@@ -19,14 +19,15 @@ def pread(filename,
     '''
     if pd is None:
         raise RuntimeError('Can not import pandas.')
-    events, messages = edfread.fread(filename, ignore_samples, filter, split_char, properties_filter)
-
+    properties_filter = set(properties_filter).union(set(['time', 'start']))
+    events, messages = edfread.fread(filename, ignore_samples, filter, split_char, properties_filter=list(properties_filter))
     messages = pd.DataFrame(messages)
     if not ignore_samples:
         # Join samples and events into one big data frame
         frames = []
         for event in events:
             samples = pd.DataFrame(event['samples'])
+            samples['sample_time'] = samples['time']
             for key in set(event.keys()) - set(['samples']):
                 samples[key] = event[key]
             frames.append(samples)

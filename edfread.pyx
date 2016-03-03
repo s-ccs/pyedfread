@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# cython: profile=True
 '''
 Reads SR Research EDF files and parses them into ocupy datamats.
 '''
@@ -66,7 +67,7 @@ def read_preamble(filename, consistency=0):
     e = edf_get_preamble_text(ef, buf, psize)
     edf_close_file(ef)
     return buf
-    
+
 
 def fread(filename,
           ignore_samples=False,
@@ -107,8 +108,7 @@ def fread(filename,
     ef = edf_open_file(filename, 0, 1, 1, &errval)
     if errval < 0:
         print filename, ' could not be openend.'
-        import sys
-        sys.exit(-1)
+        raise IOError('Could not open: %s'%filename)
     e = edf_get_preamble_text(ef, buf, 1024)
     num_elements = edf_get_element_count(ef)
     if progressbar is not None:
@@ -192,6 +192,7 @@ def fread(filename,
                     current_messages[key] = []
                     current_messages[key+'_time'] = []
                 current_messages[key].append(value)
+
                 current_messages[key+'_time'].append(data['start'])
 
         if sample_type == NO_PENDING_ITEMS:

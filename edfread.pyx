@@ -35,12 +35,14 @@ cdef extern from "edf.h":
     ctypedef int EDFFILE
     int * edf_open_file(const char * fname, int consistency, int load_events,
                         int load_samples, int * errval)
-    int  edf_get_preamble_text(EDFFILE * ef,
+    int edf_get_preamble_text_length (EDFFILE * edf);
+    int edf_get_preamble_text(EDFFILE * ef,
                                char * buffer, int length)
     int edf_get_next_data(EDFFILE * ef)
     ALLF_DATA * edf_get_float_data(EDFFILE * ef)
     int edf_get_element_count(EDFFILE * ef)
     int edf_close_file(EDFFILE * ef)
+
 
 def unbox_messages(current):
     for key in current.keys():
@@ -50,6 +52,21 @@ def unbox_messages(current):
         except TypeError:
             pass
     return current
+
+def read_preamble(filename, consistency=0):
+    cdef int errval = 1
+
+    cdef int* ef
+    ef = edf_open_file(filename, consistency, 1, 1, &errval)
+    if errval < 0:
+        print filename, ' could not be openend.'
+        raise IOError('Could not open: %s'%filename)
+    cdef int psize = edf_get_preamble_text_length(ef)
+    cdef char* buf = <char*> malloc(psize * sizeof(char))
+    e = edf_get_preamble_text(ef, buf, psize)
+    edf_close_file(ef)
+    return buf
+    
 
 def fread(filename,
           ignore_samples=False,

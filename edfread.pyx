@@ -120,7 +120,6 @@ def fread(filename,
         data = data2dict(sample_type, ef, filter=properties_filter)
         if (sample_type == STARTFIX) or (sample_type == STARTSACC):
             current_event = data
-            current_event['trial'] = trial
             current_event['blink'] = False
             if not ignore_samples:
                 sample_accumulator = SampleAccumulator()
@@ -138,6 +137,7 @@ def fread(filename,
             current_event['blink'] = True
 
         if (sample_type == SAMPLE_TYPE) and not ignore_samples:
+            data['trial'] = trial
             sample_accumulator.update(data)
 
         if sample_type == MESSAGEEVENT:
@@ -147,6 +147,8 @@ def fread(filename,
                     message_accumulator.append(unbox_messages(current_messages))
                 trial += 1
                 current_messages = {}
+                current_messages['trialid '] = data['message']
+                current_messages['trialid_time'] = data['start']
 
             elif data['message'].startswith('SYNCTIME'):
                 current_messages['SYNCTIME'] = data['start']
@@ -271,7 +273,7 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
              }
 
     if d is None:
-        return d
+        return {}
     rd = {}
     for key, val in d.iteritems():
 

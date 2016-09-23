@@ -11,8 +11,8 @@ import string
 from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 from libc.stdlib cimport malloc, free
 
-from edf_data import *
-from data cimport FSAMPLE, FEVENT, ALLF_DATA
+from pyedfread.edf_data import *
+from pyedfread.data cimport FSAMPLE, FEVENT, ALLF_DATA
 
 from sampledict import SampleAccumulator
 
@@ -121,6 +121,7 @@ def fread(filename,
         if (sample_type == STARTFIX) or (sample_type == STARTSACC):
             current_event = data
             current_event['blink'] = False
+            current_event['trial'] = trial
             if not ignore_samples:
                 sample_accumulator = SampleAccumulator()
 

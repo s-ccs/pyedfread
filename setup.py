@@ -24,13 +24,13 @@ if not 'darwin' in sys.platform:
         'extra_link_args':['-fopenmp']}
 
     ext_module = Extension(
-        "edfread",
-        ['edfread.pyx'],
+        "pyedfread.edfread",
+        ['pyedfread/edfread.pyx'],
         **args
     )
     ext_data = Extension(
-        "edf_data",
-        ['edf_data.pyx'],
+        "pyedfread.edf_data",
+        ['pyedfread/edf_data.pyx'],
         **args
     )
 else:
@@ -38,17 +38,21 @@ else:
         'extra_link_args':['-framework', 'edfapi'], 'extra_compile_args':["-w"]}
 
     ext_module = Extension(
-        "edfread",
-        ['edfread.pyx'],
+        "pyedfread.edfread",
+        ['pyedfread/edfread.pyx'],
         **args
     )
     ext_data = Extension(
-        "edf_data",
-        ['edf_data.pyx'],
+        "pyedfread.edf_data",
+        ['pyedfread/edf_data.pyx'],
         **args
     )
 
-setup(
+setup(name='pyedfread',
+    version='0.1',
+    description='Read SR-Research EDF files with python.',
+    author='Niklas Wilming',
     cmdclass = {'build_ext': build_ext},
+    packages=['pyedfread'],
     ext_modules = [ext_data,ext_module],
 )

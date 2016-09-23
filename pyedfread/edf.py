@@ -1,5 +1,5 @@
 import sys
-import edfread
+from pyedfread import edfread
 import numpy as np
 import pandas as pd
 import h5py

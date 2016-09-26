@@ -76,7 +76,7 @@ def fread(filename,
           properties_filter=['type', 'time', 'sttime',
                              'entime', 'gx', 'gy', 'gstx', 'gsty', 'genx',
                              'geny', 'gxvel', 'gyvel', 'start', 'end', 'gavx',
-                             'gavy']):
+                             'gavy', 'eye']):
     '''
     Read an EDF file into a list of dicts.
 
@@ -95,16 +95,20 @@ def fread(filename,
         Corresponds to fieldnames of the underlying c structs. For a list see
         data2dict in this file and the EDF acces API.
     '''
+
+    if 'eye' not in properties_filter:
+        properties_filter.append('eye')
+
     cdef int errval = 1
     cdef char* buf = <char*> malloc(1024 * sizeof(char))
     cdef int* ef
     cdef int sample_type
-    current_event = {'samples': []}
-    current_messages = {}
-    current_buttons = {}
-    event_accumulator = []
-    message_accumulator = []
-    sample_accumulator = SampleAccumulator()
+
+    left_ev, right_ev = {'samples': SampleAccumulator()}, {'samples': SampleAccumulator()}
+    left_msg, right_msg = {}, {}
+    left_acc, right_acc = [], []
+    left_msg_acc, right_msg_acc = [], []
+
     ef = edf_open_file(filename, 0, 1, 1, &errval)
     if errval < 0:
         print filename, ' could not be openend.'
@@ -114,69 +118,95 @@ def fread(filename,
     if progressbar is not None:
         bar = progressbar.ProgressBar(num_elements).start()
         cnt = 0
-    trial = 0
+
+    left_trial, right_trial = 0, 0
     while True:
         sample_type = edf_get_next_data(ef)
         data = data2dict(sample_type, ef, filter=properties_filter)
-        if (sample_type == STARTFIX) or (sample_type == STARTSACC):
-            current_event = data
-            current_event['blink'] = False
-            current_event['trial'] = trial
-            if not ignore_samples:
-                sample_accumulator = SampleAccumulator()
 
-        if (sample_type == ENDFIX) or (sample_type == ENDSACC):
-            if not ignore_samples:
-                current_event['samples'] = sample_accumulator
+        left, right = to_eye(data)
+        left_trial, left_ev, left_acc, left_msg, left_msg_acc = parse_datum(
+            left, sample_type, left_trial, split_char, filter, ignore_samples,
+            left_ev, left_acc, left_msg, left_msg_acc)
+        right_trial, right_ev, right_acc, right_msg, right_msg_acc = parse_datum(
+            right, sample_type, right_trial, split_char, filter, ignore_samples,
+            right_ev, right_acc, right_msg, right_msg_acc)
 
-            current_event.update(data)
-            if current_event['message'] == '':
-                del current_event['message']
-            event_accumulator.append(current_event)
+        if sample_type == NO_PENDING_ITEMS:
+            edf_close_file(ef)
+            break
+        if progressbar is not None:
+            bar.update(cnt)
+            cnt += 1
+    free(buf)
+    if not ignore_samples:
+        for i in range(len(left_acc)):
+            left_acc[i]['samples'] = left_acc[i]['samples'].get_dict()
+        for i in range(len(right_acc)):
+            right_acc[i]['samples'] = right_acc[i]['samples'].get_dict()
+    return left_acc, left_msg_acc, right_acc, right_msg_acc
 
-        if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
-            current_event['blink'] = True
 
-        if (sample_type == SAMPLE_TYPE) and not ignore_samples:
-            data['trial'] = trial
-            sample_accumulator.update(data)
+def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
+    current_event, event_accumulator, current_messages, message_accumulator):
+    '''
+    Parse a datum into data structures.
+    '''
+    if len(data) == 0:
+        return trial, current_event, event_accumulator, current_messages, message_accumulator
+    if (sample_type == STARTFIX) or (sample_type == STARTSACC):
+        current_event = data
+        current_event['blink'] = False
+        current_event['trial'] = trial
+        if not ignore_samples:
+            current_event['samples'] =  SampleAccumulator()
 
-        if sample_type == MESSAGEEVENT:
-            if data['message'].startswith('TRIALID'):
-                if (trial > 0) and (len(current_messages.keys()) > 0):
-                    current_messages['trial'] = trial
-                    message_accumulator.append(unbox_messages(current_messages))
-                trial += 1
-                current_messages = {}
-                current_messages['trialid '] = data['message']
-                current_messages['trialid_time'] = data['start']
+    if (sample_type == ENDFIX) or (sample_type == ENDSACC):
+        current_event.update(data)
+        event_accumulator.append(current_event)
 
-            elif data['message'].startswith('SYNCTIME'):
-                current_messages['SYNCTIME'] = data['start']
-                current_messages['SYNCTIME_start'] = data['start']
+    if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
+        current_event['blink'] = True
 
-            elif data['message'].startswith('DRIFTCORRECT'):
-                current_messages['DRIFTCORRECT'] = data['message']
+    if (sample_type == SAMPLE_TYPE) and not ignore_samples:
+        data['trial'] = trial
+        current_event['samples'].update(data)
 
-            elif data['message'].startswith('METATR'):
-                parts = data['message'].split(' ')
-                msg, key = parts[0], parts[1]
-                if len(parts) == 3:
-                    value = parts[2].strip().replace('\x00', '')
-                else:
-                    value = str(parts[2:])
-                current_messages[key + '_message_send_time'] = data['start']
-                try:
-                    current_messages[key] = string.atof(value)
-                except (TypeError, ValueError):
-                    current_messages[key] = value
+    if sample_type == MESSAGEEVENT:
+        if data['message'].startswith('TRIALID'):
+            if (trial > 0) and (len(current_messages.keys()) > 0):
+                current_messages['trial'] = trial
+                message_accumulator.append(unbox_messages(current_messages))
+            trial += 1
+            current_messages = {}
+            current_messages['trialid '] = data['message']
+            current_messages['trialid_time'] = data['start']
+
+        elif data['message'].startswith('SYNCTIME'):
+            current_messages['SYNCTIME'] = data['start']
+            current_messages['SYNCTIME_start'] = data['start']
+
+        elif data['message'].startswith('DRIFTCORRECT'):
+            current_messages['DRIFTCORRECT'] = data['message']
+
+        elif data['message'].startswith('METATR'):
+            parts = data['message'].split(' ')
+            msg, key = parts[0], parts[1]
+            if len(parts) == 3:
+                value = parts[2].strip().replace('\x00', '')
             else:
-                # These are messageevents that accumulate during a fixation.
-                # I treat them as key value pairs
-                msg = data['message'].strip().replace('\x00', '').split(split_char)
-                if not filter == 'all':
-                    if msg[0] not in filter:
-                        continue
+                value = str(parts[2:])
+            current_messages[key + '_message_send_time'] = data['start']
+            try:
+                current_messages[key] = string.atof(value)
+            except (TypeError, ValueError):
+                current_messages[key] = value
+        else:
+            # These are messageevents that accumulate during a fixation.
+            # I treat them as key value pairs
+
+            msg = data['message'].strip().replace('\x00', '').split(split_char)
+            if filter == 'all' or msg[0] in filter:
                 try:
                     value = [string.atof(v) for v in msg[1:]]
                 except ValueError:
@@ -193,30 +223,19 @@ def fread(filename,
                     current_messages[key] = []
                     current_messages[key+'_time'] = []
                 current_messages[key].append(value)
-
                 current_messages[key+'_time'].append(data['start'])
 
-        if sample_type == NO_PENDING_ITEMS:
-            if len(current_messages.keys()) > 0:
-                current_messages['trial'] = trial
-                message_accumulator.append(unbox_messages(current_messages))
-            edf_close_file(ef)
-            break
-        if progressbar is not None:
-            bar.update(cnt)
-            cnt += 1
-    free(buf)
-    if not ignore_samples:
-        for i in range(len(event_accumulator)):
-            event_accumulator[i]['samples'] = event_accumulator[i]['samples'].get_dict()
-    return event_accumulator, message_accumulator
+    if sample_type == NO_PENDING_ITEMS and len(current_messages.keys()) > 0:
+            current_messages['trial'] = trial
+            message_accumulator.append(unbox_messages(current_messages))
 
+    return trial, current_event, event_accumulator, current_messages, message_accumulator
 
 cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
                                              'entime', 'gx', 'gy', 'gstx',
                                              'gsty', 'genx', 'geny', 'gxvel',
                                              'gyvel', 'start', 'end', 'gavx',
-                                             'gavy']):
+                                             'gavy', 'eye']):
     '''
     Converts EDF sample to a dictionary.
     '''
@@ -282,3 +301,21 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
         if key in filter + ['message']:
             rd[key] = val
     return rd
+
+
+def to_eye(data):
+    if 'eye' in data.keys():
+        if  data['eye'] == 0:
+            return data, {}
+        else:
+            return {}, data
+    else:
+        left, right = {}, {}
+        for k, v in data.iteritems():
+            try:
+                left[k] = v[0]
+                right[k] = v[1]
+            except TypeError:
+                left[k] = v
+                right[k] = v
+    return left, right

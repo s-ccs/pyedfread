@@ -11,7 +11,7 @@ def pread(filename,
           split_char=' ',
           properties_filter=['type', 'time', 'sttime',
                              'entime', 'gx', 'gy', 'gstx', 'gsty', 'genx', 'geny',
-                             'gxvel', 'gyvel', 'start', 'end', 'gavx', 'gavy']):
+                             'gxvel', 'gyvel', 'start', 'end', 'gavx', 'gavy', 'eye']):
     '''
     Parse an EDF file into a pandas.DataFrame.
 
@@ -20,20 +20,33 @@ def pread(filename,
     if pd is None:
         raise RuntimeError('Can not import pandas.')
     properties_filter = set(properties_filter).union(set(['time', 'start']))
-    events, messages = edfread.fread(filename, ignore_samples, filter, split_char, properties_filter=list(properties_filter))
-    messages = pd.DataFrame(messages)
-    if not ignore_samples:
-        # Join samples and events into one big data frame
-        frames = []
-        for event in events:
-            samples = pd.DataFrame(event['samples'])
-            samples['sample_time'] = samples['time']
-            for key in set(event.keys()) - set(['samples']):
-                samples[key] = event[key]
-            frames.append(samples)
-        return pd.concat(frames), messages
+    left_events, left_messages, right_events, right_messages = edfread.fread(
+        filename, ignore_samples, filter, split_char,
+        properties_filter=list(properties_filter))
 
-    return pd.DataFrame(events), messages
+    if len(left_messages)>0:
+        left_messages = pd.DataFrame(left_messages)
+    else:
+        left_messages = None
+    if len(right_messages)>0:
+        right_messages = pd.DataFrame(right_messages)
+    else:
+        right_messages = None
+
+    if not ignore_samples:
+        def join(events):
+            # Join samples and events into one big data frame
+            frames = []
+            for event in left_events:
+                samples = pd.DataFrame(event['samples'])
+                samples['sample_time'] = samples['time']
+                for key in set(event.keys()) - set(['samples']):
+                    samples[key] = event[key]
+                frames.append(samples)
+            return pd.concat(frames)
+
+    return join(left_events), left_messages, join(right_events), right_messages
+
 
 
 def remove_time_fields(events):

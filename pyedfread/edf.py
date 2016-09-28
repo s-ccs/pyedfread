@@ -20,24 +20,20 @@ def pread(filename,
     if pd is None:
         raise RuntimeError('Can not import pandas.')
     properties_filter = set(properties_filter).union(set(['time', 'start']))
-    left_events, left_messages, right_events, right_messages = edfread.fread(
-        filename, ignore_samples, filter, split_char,
+    left_events, right_events, messages = edfread.fread(
+        filename, ignore_samples,
+        filter, split_char,
         properties_filter=list(properties_filter))
 
-    if len(left_messages)>0:
-        left_messages = pd.DataFrame(left_messages)
-    else:
-        left_messages = None
-    if len(right_messages)>0:
-        right_messages = pd.DataFrame(right_messages)
-    else:
-        right_messages = None
+    messages = pd.DataFrame(messages)
 
     if not ignore_samples:
         def join(events):
+            if len(events)==0:
+                return None
             # Join samples and events into one big data frame
             frames = []
-            for event in left_events:
+            for event in events:
                 samples = pd.DataFrame(event['samples'])
                 samples['sample_time'] = samples['time']
                 for key in set(event.keys()) - set(['samples']):
@@ -45,7 +41,7 @@ def pread(filename,
                 frames.append(samples)
             return pd.concat(frames)
 
-    return join(left_events), left_messages, join(right_events), right_messages
+    return join(left_events),  join(right_events), messages
 
 
 
@@ -62,6 +58,40 @@ def trials2events(events, messages):
     Matches trial meta information to individual events (e.g. fixations/saccades).
     '''
     return events.merge(messages, how='left', on=['trial'])
+
+
+def join_left_right(left, right):
+    if left is not None:
+        left.rename(columns=dict((k, 'left_'+k) for k in left), inplace=True)
+    if right is not None:
+        right.rename(columns=dict((k, 'right_'+k) for k in right), inplace=True)
+    if left is None:
+        events = right
+        events.loc[:, 'trial'] = events.loc[:, 'right_trial']
+        del events['right_trial']
+    elif right is None:
+        events = left
+        events.loc[:, 'trial'] = events.loc[:, 'left_trial']
+        del events['left_trial']
+    else:
+        events = pd.concat((left.set_index('left_sample_time'),
+                          right.set_index('right_sample_time'))).reset_index()
+        events.loc[:, 'trial'] =   events.loc[:, 'right_trial']
+        events.rename(columns={'index':'sample_time'}, inplace=True)
+        del events['right_trial']
+        del events['left_trial']
+    return events
+
+def get_list(subjects, pread=lambda x: pread(x)):
+    dfs = []
+    for snum, filename in subjects.iteritems():
+        le, re, messages = pread(filename)
+        messsages = remove_time_fields(messages)
+        events = join_left_right(le, re)
+        df = trials2events(events, messages)
+        df['SUBJECTINDEX'] = snum
+        dfs.append(df)
+    return dfs
 
 
 def save_human_understandable(data, path):

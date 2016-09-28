@@ -105,9 +105,9 @@ def fread(filename,
     cdef int sample_type
 
     left_ev, right_ev = {'samples': SampleAccumulator()}, {'samples': SampleAccumulator()}
-    left_msg, right_msg = {}, {}
     left_acc, right_acc = [], []
-    left_msg_acc, right_msg_acc = [], []
+    current_messages = {}
+    message_accumulator = []
 
     ef = edf_open_file(filename, 0, 1, 1, &errval)
     if errval < 0:
@@ -119,18 +119,30 @@ def fread(filename,
         bar = progressbar.ProgressBar(num_elements).start()
         cnt = 0
 
-    left_trial, right_trial = 0, 0
+    trial = 0
     while True:
         sample_type = edf_get_next_data(ef)
         data = data2dict(sample_type, ef, filter=properties_filter)
 
-        left, right = to_eye(data)
-        left_trial, left_ev, left_acc, left_msg, left_msg_acc = parse_datum(
-            left, sample_type, left_trial, split_char, filter, ignore_samples,
-            left_ev, left_acc, left_msg, left_msg_acc)
-        right_trial, right_ev, right_acc, right_msg, right_msg_acc = parse_datum(
-            right, sample_type, right_trial, split_char, filter, ignore_samples,
-            right_ev, right_acc, right_msg, right_msg_acc)
+        if sample_type == MESSAGEEVENT:
+            trial, current_messages, message_accumulator = parse_message(
+                data, trial, current_messages, message_accumulator, split_char, filter)
+
+        elif sample_type == NO_PENDING_ITEMS and len(current_messages.keys()) > 0:
+                current_messages['trial'] = trial
+                message_accumulator.append(unbox_messages(current_messages))
+        else:
+            left, right = to_eye(data)
+            left_ev, left_acc = parse_datum(
+                                            left, sample_type,
+                                            trial, split_char,
+                                            filter, ignore_samples,
+                                            left_ev, left_acc)
+            right_ev, right_acc = parse_datum(
+                                            right, sample_type,
+                                            trial, split_char,
+                                            filter, ignore_samples,
+                                            right_ev, right_acc)
 
         if sample_type == NO_PENDING_ITEMS:
             edf_close_file(ef)
@@ -144,16 +156,16 @@ def fread(filename,
             left_acc[i]['samples'] = left_acc[i]['samples'].get_dict()
         for i in range(len(right_acc)):
             right_acc[i]['samples'] = right_acc[i]['samples'].get_dict()
-    return left_acc, left_msg_acc, right_acc, right_msg_acc
+    return left_acc, right_acc, message_accumulator
 
 
 def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
-    current_event, event_accumulator, current_messages, message_accumulator):
+    current_event, event_accumulator):
     '''
     Parse a datum into data structures.
     '''
     if len(data) == 0:
-        return trial, current_event, event_accumulator, current_messages, message_accumulator
+        return current_event, event_accumulator
     if (sample_type == STARTFIX) or (sample_type == STARTSACC):
         current_event = data
         current_event['blink'] = False
@@ -172,64 +184,63 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
         data['trial'] = trial
         current_event['samples'].update(data)
 
-    if sample_type == MESSAGEEVENT:
-        if data['message'].startswith('TRIALID'):
-            if (trial > 0) and (len(current_messages.keys()) > 0):
-                current_messages['trial'] = trial
-                message_accumulator.append(unbox_messages(current_messages))
-            trial += 1
-            current_messages = {}
-            current_messages['trialid '] = data['message']
-            current_messages['trialid_time'] = data['start']
+    return current_event, event_accumulator
 
-        elif data['message'].startswith('SYNCTIME'):
-            current_messages['SYNCTIME'] = data['start']
-            current_messages['SYNCTIME_start'] = data['start']
 
-        elif data['message'].startswith('DRIFTCORRECT'):
-            current_messages['DRIFTCORRECT'] = data['message']
-
-        elif data['message'].startswith('METATR'):
-            parts = data['message'].split(' ')
-            msg, key = parts[0], parts[1]
-            if len(parts) == 3:
-                value = parts[2].strip().replace('\x00', '')
-            else:
-                value = str(parts[2:])
-            current_messages[key + '_message_send_time'] = data['start']
-            try:
-                current_messages[key] = string.atof(value)
-            except (TypeError, ValueError):
-                current_messages[key] = value
-        else:
-            # These are messageevents that accumulate during a fixation.
-            # I treat them as key value pairs
-
-            msg = data['message'].strip().replace('\x00', '').split(split_char)
-            if filter == 'all' or msg[0] in filter:
-                try:
-                    value = [string.atof(v) for v in msg[1:]]
-                except ValueError:
-                    value = msg[1:]
-
-                if len(msg) == 1:
-                    key, value = msg[0], np.nan
-                elif len(msg) == 2:
-                    key, value = msg[0], value[0]
-                elif len(msg) > 2:
-                    key, value = msg[0], value
-
-                if key not in current_messages.keys():
-                    current_messages[key] = []
-                    current_messages[key+'_time'] = []
-                current_messages[key].append(value)
-                current_messages[key+'_time'].append(data['start'])
-
-    if sample_type == NO_PENDING_ITEMS and len(current_messages.keys()) > 0:
+def parse_message(data, trial, current_messages, message_accumulator, split_char, filter):
+    if data['message'].startswith('TRIALID'):
+        if (trial > 0) and (len(current_messages.keys()) > 0):
             current_messages['trial'] = trial
             message_accumulator.append(unbox_messages(current_messages))
+        trial += 1
+        current_messages = {}
+        current_messages['trialid '] = data['message']
+        current_messages['trialid_time'] = data['start']
 
-    return trial, current_event, event_accumulator, current_messages, message_accumulator
+    elif data['message'].startswith('SYNCTIME'):
+        current_messages['SYNCTIME'] = data['start']
+        current_messages['SYNCTIME_start'] = data['start']
+
+    elif data['message'].startswith('DRIFTCORRECT'):
+        current_messages['DRIFTCORRECT'] = data['message']
+
+    elif data['message'].startswith('METATR'):
+        parts = data['message'].split(' ')
+        msg, key = parts[0], parts[1]
+        if len(parts) == 3:
+            value = parts[2].strip().replace('\x00', '')
+        else:
+            value = str(parts[2:])
+        current_messages[key + '_message_send_time'] = data['start']
+        try:
+            current_messages[key] = string.atof(value)
+        except (TypeError, ValueError):
+            current_messages[key] = value
+    else:
+        # These are messageevents that accumulate during a fixation.
+        # I treat them as key value pairs
+
+        msg = data['message'].strip().replace('\x00', '').split(split_char)
+        if filter == 'all' or msg[0] in filter:
+            try:
+                value = [string.atof(v) for v in msg[1:]]
+            except ValueError:
+                value = msg[1:]
+
+            if len(msg) == 1:
+                key, value = msg[0], np.nan
+            elif len(msg) == 2:
+                key, value = msg[0], value[0]
+            elif len(msg) > 2:
+                key, value = msg[0], value
+
+            if key not in current_messages.keys():
+                current_messages[key] = []
+                current_messages[key+'_time'] = []
+            current_messages[key].append(value)
+            current_messages[key+'_time'].append(data['start'])
+    return trial, current_messages, message_accumulator
+
 
 cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
                                              'entime', 'gx', 'gy', 'gstx',
@@ -316,6 +327,8 @@ def to_eye(data):
                 left[k] = v[0]
                 right[k] = v[1]
             except TypeError:
+                if k == 'gx':
+                    raise RuntimeError('///')
                 left[k] = v
                 right[k] = v
     return left, right

@@ -90,7 +90,7 @@ def get_list(subjects, pread=lambda x: pread(x)):
         events = join_left_right(le, re)
         df = trials2events(events, messages)
         df['SUBJECTINDEX'] = snum
-        dfs.append(df)
+        dfs.append(remove_time_fields(df))
     return dfs
 
 
@@ -100,7 +100,8 @@ def save_human_understandable(data, path):
         fm_group = f.create_group('edf')
         for field in data.columns:
             try:
-                fm_group.create_dataset(field, data=data[field])
+                fm_group.create_dataset(field, data=data[field],
+                    compression="gzip", compression_opts=1, shuffle=True)
             except TypeError:
                 # Probably a string that can not be saved in hdf.
                 # Map to numbers and save mapping in attrs.

@@ -30,15 +30,14 @@ Requirements
 
 Setup
 =====
-Run  'python setup.py build_ext --inplace' to compile the package. Add the
-pyedfread path to yout PYTHONPATH. Eventually this might be turned into a
-package that can be installed via pip or so.
+Run  'python setup.py install' to compile and install. This will install the
+python library and a command line script to parse edfs.
 
 
 Usage
 =====
 
-pyedfread can be used on the command line (python edf.py) or called from
+pyedfread can be used on the command line (read_edf) or called from
 within python.
 
 From python
@@ -47,16 +46,17 @@ From python
 After compilation run the following lines for a quick test.
 
     >>> import edf
-    >>> events, messages = edf.pread('SUB001.EDF', ignore_samples=True)
+    >>> left, right, messages = edf.pread('SUB001.EDF', ignore_samples=True)
 
-This opens SUB001.EDF and parses it into two DataFrames:
+This opens SUB001.EDF and parses it three two DataFrames:
 
- - events contains the eye tracking data for each fixation / saccade
+ - left and right contains eye tracking data for each fixation / saccade from
+   either the left or right eye.
  - messages contains meta data associated with each trial.
 
-To add the trial meta data into the events structure run:
+To add the trial meta data into the eye tracking data run:
 
-    >>> data = edf.trials2events(events, messages)
+    >>> left = edf.trials2events(left, messages)
 
 pyedfread allows to select which data you want to read from your edf file. This
 happens with two arguments to edfread.fread / edf.pread. The 'filter' argument
@@ -68,7 +68,7 @@ field condition with value 1 for each trial to the messages structure. Of course
 if the value varies across trials this will be reflected in the messages
 structure. This is what it looks like in python code:
 
-	>>> events, messages = edf.pread('SUB001.EDF', ignore_samples=True, filter=['condition'])
+	>>> left, right, messages = edf.pread('SUB001.EDF', ignore_samples=True, filter=['condition'])
 
 If filter='all', pyedfread saves all messages it can parse.
 
@@ -76,7 +76,7 @@ You can also specify which properties of the eye tracking data you pull out. If
 you want, for example, only the pupil and the gaze x position you can set the
 'properties_filter' of the edfread.fread / edf.pread method:
 
-	>>> events, messages = edf.pread('SUB001.EDF',
+	>>> left, right, messages = edf.pread('SUB001.EDF',
 					 ignore_samples=True,
 	        			 properties_filter=['gx', 'pa'])
 
@@ -98,9 +98,12 @@ Command line
 If you have an EDF file with "standard" meta data (e.g. key and value are seperated by a
 blank) you can call
 
-	$> python edf.py SUB001.EDF sub001.hdf
+	$> read_edf SUB001.EDF sub001.hdf
 
-The .hdf file is a valid hdf5 file that can be read into matlab.
+The .hdf file is a valid hdf5 file that can be read into matlab. But you can
+simplify the HDF format a bit by passing -e to read_edf
+
+Run 'read_edf -h' for some help.
 
 
 Matlab

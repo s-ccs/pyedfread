@@ -27,21 +27,23 @@ def pread(filename,
 
     messages = pd.DataFrame(messages)
 
-    if not ignore_samples:
-        def join(events):
-            if len(events)==0:
-                return None
-            # Join samples and events into one big data frame
-            frames = []
-            for event in events:
-                samples = pd.DataFrame(event['samples'])
-                samples['sample_time'] = samples['time']
-                for key in set(event.keys()) - set(['samples']):
-                    samples[key] = event[key]
-                frames.append(samples)
-            return pd.concat(frames)
-
-    return join(left_events),  join(right_events), messages
+    def join(events, ignore_samples):
+        if len(events)==0 or events is None:
+            return None
+        if ignore_samples:
+            return pd.DataFrame(events)
+        # Join samples and events into one big data frame
+        frames = []
+        for event in events:
+            samples = pd.DataFrame(event['samples'])
+            samples['sample_time'] = samples['time']
+            for key in set(event.keys()) - set(['samples']):
+                samples[key] = event[key]
+            frames.append(samples)
+        return pd.concat(frames)
+    return  (join(left_events, ignore_samples),
+        join(right_events, ignore_samples),
+        pd.DataFrame(messages))
 
 
 
@@ -94,7 +96,7 @@ def get_list(subjects, pread=lambda x: pread(x)):
     return dfs
 
 
-def save_human_understandable(data, path):
+def save_human_understandable(data, path, name):
     f = h5py.File(path, 'w')
     try:
         fm_group = f.create_group('edf')
@@ -124,10 +126,18 @@ if __name__ == '__main__':
                         help='Should the individual samples be stored in the output? Default is no, ie. ignore-samples=True')
     args = parser.parse_args()
 
-    events, messages = pread(args.edffile, ignore_samples=args.ignore_samples)
-    events = trials2events(events, messages)
+    left, right, messages = pread(args.edffile, ignore_samples=args.ignore_samples)
+    left = trials2events(left, messages)
     if args.easy_hdf:
-        save_human_understandable(events, args.outputfile)
+        if left is not None:
+            save_human_understandable(events, args.outputfile, 'left')
+        if right is not None:
+            save_human_understandable(right, args.outputfile, 'right')
+
     else:
-        events.to_hdf(args.outputfile, 'edf', mode='w', complevel=9,
-                      complib='zlib')
+        if left is not None:
+            left.to_hdf(args.outputfile, 'left', mode='w', complevel=9,
+                    complib='zlib')
+        if right is not None:
+            right.to_hdf(args.outputfile, 'right', mode='w', complevel=9,
+                    complib='zlib')

@@ -35,7 +35,7 @@ if not 'darwin' in sys.platform:
     )
 else:
     args = {'include_dirs':[numpy.get_include(), '/Library/Frameworks/edfapi.framework/Headers'],
-        'extra_link_args':['-framework', 'edfapi'], 'extra_compile_args':["-w"]}
+        'extra_link_args':['-F/Library/Frameworks/', '-framework', 'edfapi'], 'extra_compile_args':["-w"]}
 
     ext_module = Extension(
         "pyedfread.edfread",
@@ -55,4 +55,5 @@ setup(name='pyedfread',
     cmdclass = {'build_ext': build_ext},
     packages=['pyedfread'],
     ext_modules = [ext_data,ext_module],
+    scripts=['pyedfread/read_edf']
 )

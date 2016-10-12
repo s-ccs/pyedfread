@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+import sys
+from pyedfread import edf
+import numpy as np
+import pandas as pd
+import h5py
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("edffile", help='The EDF file you would like to parse')
+    parser.add_argument("outputfile", help='Where to save the output')
+    parser.add_argument("-e", "--easy_hdf", action='store_true', default=False,
+                        help='Structure hdf output to be easily readable from e.g. matlab. Default just dumps a pandas DataFrame to hdf.')
+    parser.add_argument("-i", "--ignore-samples", action='store_true', default=False,
+                        help='Should the individual samples be stored in the output? Default is to read samples, ie. ignore-samples=False')
+    args = parser.parse_args()
+    print 'Parsing', args.edffile
+    left, right, messages = edf.pread(args.edffile, ignore_samples=args.ignore_samples)
+
+    print 'Joining events and metadata'
+    if left is not None:
+        left = edf.trials2events(left, messages)
+    if right is not None:
+        right = edf.trials2events(right, messages)
+
+    print 'Saving to', args.outputfile
+    if args.easy_hdf:
+        if left is not None:
+            edf.save_human_understandable(events, args.outputfile, 'left')
+        if right is not None:
+            edf.save_human_understandable(right, args.outputfile, 'right')
+
+    else:
+        if left is not None:
+            left.to_hdf(args.outputfile, 'left', mode='w', complevel=9,
+                    complib='zlib')
+        if right is not None:
+            right.to_hdf(args.outputfile, 'right', mode='w', complevel=9,
+                    complib='zlib')

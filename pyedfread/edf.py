@@ -84,10 +84,11 @@ def join_left_right(left, right):
         del events['left_trial']
     return events
 
+
 def get_list(subjects, pread=lambda x: pread(x)):
     dfs = []
     for snum, filename in subjects.iteritems():
-        le, re, messages = pread(filename)
+        le, re, messages = pread(filename, filter='all')
         messsages = remove_time_fields(messages)
         events = join_left_right(le, re)
         df = trials2events(events, messages)

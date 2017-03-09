@@ -3,7 +3,6 @@
 '''
 Reads SR Research EDF files and parses them into ocupy datamats.
 '''
-
 cimport numpy as np
 import numpy as np
 import string
@@ -12,9 +11,12 @@ from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 from libc.stdlib cimport malloc, free
 
 from pyedfread.edf_data import *
-from pyedfread.data cimport FSAMPLE, FEVENT, ALLF_DATA
+from pyedfread.data cimport FSAMPLE, FEVENT, ALLF_DATA, FS
+from pyedfread.data cimport fsample_fs
 
 from sampledict import SampleAccumulator
+
+import pandas as pd
 
 try:
     import progressbar
@@ -157,6 +159,106 @@ def fread(filename,
         for i in range(len(right_acc)):
             right_acc[i]['samples'] = right_acc[i]['samples'].get_dict()
     return left_acc, right_acc, message_accumulator
+
+
+import struct
+
+
+def speed_test(filename,
+          ignore_samples=False,
+          filter=[],
+          split_char=' ',
+          properties_filter=['type', 'time', 'sttime',
+                             'entime', 'gx', 'gy', 'gstx', 'gsty', 'genx',
+                             'geny', 'gxvel', 'gyvel', 'start', 'end', 'gavx',
+                             'gavy', 'eye']):
+    st(filename, filter, split_char, properties_filter)
+
+
+cdef st(filename, filter, split_char, properties_filter):
+    cdef int errval = 1
+    cdef char* buf = <char*> malloc(1024 * sizeof(char))
+    cdef int* ef
+    cdef int sample_type, cnt
+
+    left_acc, right_acc = [], []
+    current_messages = {}
+    message_accumulator = []
+
+    ef = edf_open_file(filename, 0, 1, 1, &errval)
+    if errval < 0:
+        print filename, ' could not be openend.'
+        raise IOError('Could not open: %s'%filename)
+    e = edf_get_preamble_text(ef, buf, 1024)
+    num_elements = edf_get_element_count(ef)
+    cdef np.ndarray npsamples = np.ndarray((num_elements,  54), dtype=np.float64)
+    cdef np.float64_t[:, :] samples = npsamples
+
+    trial = 0
+    cnt=0
+    cdef int i=0
+    cdef int pt
+    while True:
+        sample_type = edf_get_next_data(ef)
+        if (sample_type == SAMPLE_TYPE):
+            fd = edf_get_float_data(ef)
+            samples[cnt, 0] = fd.fs.time  # time of sample
+            samples[cnt, 1] = fd.fs.px[0]
+            samples[cnt, 2] = fd.fs.px[1]
+            samples[cnt, 3] = fd.fs.py[0]
+            samples[cnt, 4] = fd.fs.py[1]
+            samples[cnt, 5] = fd.fs.hx[0]
+            samples[cnt, 6] = fd.fs.hx[1]
+            samples[cnt, 7] = fd.fs.hy[0]
+            samples[cnt, 8] = fd.fs.hy[1]
+            samples[cnt, 9] = fd.fs.pa[0]
+            samples[cnt, 10] = fd.fs.pa[1]
+            samples[cnt, 11] = fd.fs.gx[0]
+            samples[cnt, 12] = fd.fs.gx[1]
+            samples[cnt, 13] = fd.fs.gy[0]
+            samples[cnt, 14] = fd.fs.gy[1]
+            samples[cnt, 15] = fd.fs.rx
+            samples[cnt, 16] = fd.fs.ry
+
+            samples[cnt, 17] = fd.fs.gxvel[0]
+            samples[cnt, 18] = fd.fs.gxvel[1]
+            samples[cnt, 19] = fd.fs.gyvel[0]
+            samples[cnt, 20] = fd.fs.gyvel[1]
+            samples[cnt, 21] = fd.fs.hxvel[0]
+            samples[cnt, 22] = fd.fs.hxvel[1]
+            samples[cnt, 23] = fd.fs.hyvel[0]
+            samples[cnt, 24] = fd.fs.hyvel[1]
+            samples[cnt, 25] = fd.fs.rxvel[0]
+            samples[cnt, 26] = fd.fs.rxvel[1]
+            samples[cnt, 27] = fd.fs.ryvel[0]
+            samples[cnt, 28] = fd.fs.ryvel[1]
+
+            samples[cnt, 29] = fd.fs.fgxvel[0]
+            samples[cnt, 30] = fd.fs.fgyvel[1]
+            samples[cnt, 31] = fd.fs.fhxvel[0]
+            samples[cnt, 32] = fd.fs.fhyvel[1]
+            samples[cnt, 33] = fd.fs.frxvel[0]
+            samples[cnt, 34] = fd.fs.fryvel[1]
+
+            #samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data (not prescaled)
+            samples[cnt, 48] = fd.fs.flags #flags to indicate contents
+            samples[cnt, 49] = fd.fs.input #extra (input word)
+            samples[cnt, 50] = fd.fs.buttons # button state & changes
+            samples[cnt, 51] = fd.fs.htype #head-tracker data type
+            samples[cnt, 52] = fd.fs.errors
+            cnt+=1
+
+        if sample_type == MESSAGEEVENT:
+            data = data2dict(sample_type, ef, filter=properties_filter)
+            trial, current_messages, message_accumulator = parse_message(
+                data, trial, current_messages, message_accumulator, split_char, filter)
+
+        if sample_type == NO_PENDING_ITEMS:
+            edf_close_file(ef)
+            break
+    free(buf)
+    
+
 
 
 def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
@@ -308,7 +410,6 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
         return {}
     rd = {}
     for key, val in d.iteritems():
-
         if key in filter + ['message']:
             rd[key] = val
     return rd

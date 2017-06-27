@@ -14,7 +14,7 @@ from libc.stdlib cimport malloc, free
 from pyedfread.edf_data import *
 from pyedfread.data cimport FSAMPLE, FEVENT, ALLF_DATA
 
-from sampledict import SampleAccumulator
+#from sampledict import SampleAccumulator
 
 try:
     import progressbar
@@ -27,9 +27,9 @@ except ImportError:
     pandas = None
 
 
-type2label = {STARTFIX: 'fixation', STARTSACC: 'saccade', STARTBLINK: 'blink',
-              ENDFIX: 'fixation', ENDSACC: 'saccade', ENDBLINK: 'blink',
-              MESSAGEEVENT: 'message'}
+type2label = {STARTFIX: b'fixation', STARTSACC: b'saccade', STARTBLINK: b'blink',
+              ENDFIX: b'fixation', ENDSACC: b'saccade', ENDBLINK: b'blink',
+              MESSAGEEVENT: b'message'}
 
 
 cdef extern from "edf.h":
@@ -43,6 +43,45 @@ cdef extern from "edf.h":
     ALLF_DATA * edf_get_float_data(EDFFILE * ef)
     int edf_get_element_count(EDFFILE * ef)
     int edf_close_file(EDFFILE * ef)
+
+
+class SampleAccumulator:
+
+    def __init__(self):
+        self.this_is_my_data = dict()
+        #print('Init empty sample accumulator:', self.d)
+
+    def update(self, give_me_this):
+        if len(self.this_is_my_data.keys()) == 0:
+            for key, value in give_me_this.items():
+                self.this_is_my_data[key] = [value] # = dict((k, [v]) for k, v in give_me_this.iteritems())
+
+        else:
+            # For all fields in a that are also in dict
+            all_keys = set(list(give_me_this.keys()) + list(self.this_is_my_data.keys()))
+            for key in all_keys:
+                if key in give_me_this.keys():
+                    value = give_me_this[key]
+                if key not in self.this_is_my_data.keys():
+                    # key is not yet in d. add it
+                    self.this_is_my_data[key] = [np.nan]*len(self.this_is_my_data[self.this_is_my_data.keys()[0]])
+                if key not in give_me_this.keys():
+                    # key is not in new data. value should be nan
+                    value = np.nan
+                self.this_is_my_data[key].extend([value])
+
+
+    def get_dict(self, params=None):
+        d = {}
+        for key, value in self.this_is_my_data.iteritems():
+            values = np.array(value)
+            if len(values.shape) == 2 and values.shape[1] == 2:
+                d[b'left_' + key] = values[:, edf_data.LEFT_EYE]
+                d[b'right_' + key] = values[:, edf_data.RIGHT_EYE]
+            else:
+                d[key] = values
+        self.this_is_my_data = {}
+        return d
 
 
 def unbox_messages(current):
@@ -72,11 +111,11 @@ def read_preamble(filename, consistency=0):
 def fread(filename,
           ignore_samples=False,
           filter=[],
-          split_char=' ',
-          properties_filter=['type', 'time', 'sttime',
-                             'entime', 'gx', 'gy', 'gstx', 'gsty', 'genx',
-                             'geny', 'gxvel', 'gyvel', 'start', 'end', 'gavx',
-                             'gavy', 'eye']):
+          split_char=b' ',
+          properties_filter=[b'type', b'time', b'sttime',
+                             b'entime', b'gx', b'gy', b'gstx', b'gsty', b'genx',
+                             b'geny', b'gxvel', b'gyvel', b'start', b'end', b'gavx',
+                             b'gavy', b'eye']):
     '''
     Read an EDF file into a list of dicts.
 
@@ -96,20 +135,21 @@ def fread(filename,
         data2dict in this file and the EDF acces API.
     '''
 
-    if 'eye' not in properties_filter:
-        properties_filter.append('eye')
+    if b'eye' not in properties_filter:
+        properties_filter.append(b'eye')
 
     cdef int errval = 1
     cdef char* buf = <char*> malloc(1024 * sizeof(char))
     cdef int* ef
     cdef int sample_type
 
-    left_ev, right_ev = {'samples': SampleAccumulator()}, {'samples': SampleAccumulator()}
+    left_ev, right_ev = {b'samples': SampleAccumulator()}, {b'samples': SampleAccumulator()}
     left_acc, right_acc = [], []
     current_messages = {}
     message_accumulator = []
 
     ef = edf_open_file(filename, 0, 1, 1, &errval)
+
     if errval < 0:
         print filename, ' could not be openend.'
         raise IOError('Could not open: %s'%filename)
@@ -123,13 +163,12 @@ def fread(filename,
     while True:
         sample_type = edf_get_next_data(ef)
         data = data2dict(sample_type, ef, filter=properties_filter)
-
         if sample_type == MESSAGEEVENT:
             trial, current_messages, message_accumulator = parse_message(
                 data, trial, current_messages, message_accumulator, split_char, filter)
 
         elif sample_type == NO_PENDING_ITEMS and len(current_messages.keys()) > 0:
-                current_messages['trial'] = trial
+                current_messages[b'trial'] = trial
                 message_accumulator.append(unbox_messages(current_messages))
         else:
             left, right = to_eye(data)
@@ -153,9 +192,9 @@ def fread(filename,
     free(buf)
     if not ignore_samples:
         for i in range(len(left_acc)):
-            left_acc[i]['samples'] = left_acc[i]['samples'].get_dict()
+            left_acc[i][b'samples'] = left_acc[i][b'samples'].get_dict()
         for i in range(len(right_acc)):
-            right_acc[i]['samples'] = right_acc[i]['samples'].get_dict()
+            right_acc[i][b'samples'] = right_acc[i][b'samples'].get_dict()
     return left_acc, right_acc, message_accumulator
 
 
@@ -168,50 +207,46 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
         return current_event, event_accumulator
     if (sample_type == STARTFIX) or (sample_type == STARTSACC):
         current_event = data
-        current_event['blink'] = False
-        current_event['trial'] = trial
+        current_event[b'blink'] = False
+        current_event[b'trial'] = trial
         if not ignore_samples:
-            current_event['samples'] =  SampleAccumulator()
-
+            current_event[b'samples'] =  SampleAccumulator()
     if (sample_type == ENDFIX) or (sample_type == ENDSACC):
         current_event.update(data)
         event_accumulator.append(current_event)
-
     if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
-        current_event['blink'] = True
-
+        current_event[b'blink'] = True
     if (sample_type == SAMPLE_TYPE) and not ignore_samples:
-        data['trial'] = trial
-        current_event['samples'].update(data)
-
+        data[b'trial'] = trial
+        current_event[b'samples'].update(data)
     return current_event, event_accumulator
 
 
 def parse_message(data, trial, current_messages, message_accumulator, split_char, filter):
-    if data['message'].startswith('TRIALID'):
+    if data[b'message'].startswith(b'TRIALID'):
         if (trial > 0) and (len(current_messages.keys()) > 0):
-            current_messages['trial'] = trial
+            current_messages[b'trial'] = trial
             message_accumulator.append(unbox_messages(current_messages))
         trial += 1
         current_messages = {}
-        current_messages['trialid '] = data['message']
-        current_messages['trialid_time'] = data['start']
+        current_messages[b'trialid '] = data[b'message']
+        current_messages[b'trialid_time'] = data[b'start']
 
-    elif data['message'].startswith('SYNCTIME'):
-        current_messages['SYNCTIME'] = data['start']
-        current_messages['SYNCTIME_start'] = data['start']
+    elif data[b'message'].startswith(b'SYNCTIME'):
+        current_messages[b'SYNCTIME'] = data[b'start']
+        current_messages[b'SYNCTIME_start'] = data[b'start']
 
-    elif data['message'].startswith('DRIFTCORRECT'):
-        current_messages['DRIFTCORRECT'] = data['message']
+    elif data[b'message'].startswith(b'DRIFTCORRECT'):
+        current_messages[b'DRIFTCORRECT'] = data[b'message']
 
-    elif data['message'].startswith('METATR'):
-        parts = data['message'].split(' ')
+    elif data[b'message'].startswith(b'METATR'):
+        parts = data[b'message'].split(' ')
         msg, key = parts[0], parts[1]
         if len(parts) == 3:
             value = parts[2].strip().replace('\x00', '')
         else:
             value = str(parts[2:])
-        current_messages[key + '_message_send_time'] = data['start']
+        current_messages[key + b'_message_send_time'] = data[b'start']
         try:
             current_messages[key] = string.atof(value)
         except (TypeError, ValueError):
@@ -220,10 +255,11 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
         # These are messageevents that accumulate during a fixation.
         # I treat them as key value pairs
 
-        msg = data['message'].strip().replace('\x00', '').split(split_char)
-        if filter == 'all' or msg[0] in filter:
+        msg = data[b'message'].strip().replace(b'\x00', b'').split(split_char)
+        if filter == b'all' or msg[0] in filter:
             try:
-                value = [string.atof(v) for v in msg[1:]]
+                #value = [string.atof(v) for v in msg[1:]]
+                value = [float(v) for v in msg[1:]]
             except ValueError:
                 value = msg[1:]
 
@@ -236,21 +272,22 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
 
             if key not in current_messages.keys():
                 current_messages[key] = []
-                current_messages[key+'_time'] = []
+                current_messages[key+b'_time'] = []
             current_messages[key].append(value)
-            current_messages[key+'_time'].append(data['start'])
+            current_messages[key+b'_time'].append(data[b'start'])
     return trial, current_messages, message_accumulator
 
 
-cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
-                                             'entime', 'gx', 'gy', 'gstx',
-                                             'gsty', 'genx', 'geny', 'gxvel',
-                                             'gyvel', 'start', 'end', 'gavx',
-                                             'gavy', 'eye']):
+cdef data2dict(sample_type, int* ef, filter=[b'type', b'time', b'sttime',
+                                             b'entime', b'gx', b'gy', b'gstx',
+                                             b'gsty', b'genx', b'geny', b'gxvel',
+                                             b'gyvel', b'start', b'end', b'gavx',
+                                             b'gavy', b'eye']):
     '''
     Converts EDF sample to a dictionary.
     '''
     fd = edf_get_float_data(ef)
+
     cdef char* msg
     d = None
     if ((sample_type == STARTFIX) or
@@ -265,43 +302,43 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
         if <int>fd.fe.message != 0:
             msg = &fd.fe.message.c
             message = msg[:fd.fe.message.len]
-        d = {'time': fd.fe.time, 'type': type2label[sample_type],
-             'start': fd.fe.sttime, 'end': fd.fe.entime,
-             'hstx': fd.fe.hstx, 'hsty': fd.fe.hsty,
-             'gstx': fd.fe.gstx, 'gsty': fd.fe.gsty,
-             'sta': fd.fe.sta, 'henx': fd.fe.henx,
-             'heny': fd.fe.heny, 'genx': fd.fe.genx,
-             'geny': fd.fe.geny, 'ena': fd.fe.ena,
-             'havx': fd.fe.havx, 'havy': fd.fe.havy,
-             'gavx': fd.fe.gavx, 'gavy': fd.fe.gavy,
-             'ava': fd.fe.ava, 'avel': fd.fe.avel,
-             'pvel': fd.fe.pvel, 'svel': fd.fe.svel,
-             'evel': fd.fe.evel, 'supd_x': fd.fe.supd_x, 'eupd_x': fd.fe.eupd_x,
-             'eye': fd.fe.eye, 'buttons': fd.fe.buttons, 'message': message,
+        d = {b'time': fd.fe.time, b'type': type2label[sample_type],
+             b'start': fd.fe.sttime, b'end': fd.fe.entime,
+             b'hstx': fd.fe.hstx, b'hsty': fd.fe.hsty,
+             b'gstx': fd.fe.gstx, b'gsty': fd.fe.gsty,
+             b'sta': fd.fe.sta, b'henx': fd.fe.henx,
+             b'heny': fd.fe.heny, b'genx': fd.fe.genx,
+             b'geny': fd.fe.geny, b'ena': fd.fe.ena,
+             b'havx': fd.fe.havx, b'havy': fd.fe.havy,
+             b'gavx': fd.fe.gavx, b'gavy': fd.fe.gavy,
+             b'ava': fd.fe.ava, b'avel': fd.fe.avel,
+             b'pvel': fd.fe.pvel, b'svel': fd.fe.svel,
+             b'evel': fd.fe.evel, b'supd_x': fd.fe.supd_x, b'eupd_x': fd.fe.eupd_x,
+             b'eye': fd.fe.eye, b'buttons': fd.fe.buttons, b'message': message,
              }
     if sample_type == SAMPLE_TYPE:
-        d = {'time': fd.fs.time,
-             'px': (fd.fs.px[0], fd.fs.px[1]),
-             'py': (fd.fs.py[0], fd.fs.py[1]),
-             'hx': (fd.fs.hx[0], fd.fs.hx[1]),
-             'hy': (fd.fs.hy[0], fd.fs.hy[1]),
-             'gx': (fd.fs.gx[0], fd.fs.gx[1]),
-             'gy': (fd.fs.gy[0], fd.fs.gy[1]),
-             'pa': (fd.fs.pa[0], fd.fs.pa[1]),
-             'rx': fd.fs.rx,
-             'ry': fd.fs.ry,
-             'gxvel': (fd.fs.gxvel[0], fd.fs.gxvel[1]),
-             'gyvel': (fd.fs.gyvel[0], fd.fs.gyvel[1]),
-             'hxvel': (fd.fs.hxvel[0], fd.fs.hxvel[1]),
-             'hyvel': (fd.fs.hyvel[0], fd.fs.hyvel[1]),
-             'rxvel': (fd.fs.rxvel[0], fd.fs.rxvel[1]),
-             'ryvel': (fd.fs.ryvel[0], fd.fs.ryvel[1]),
-             'fgxvel': (fd.fs.fgxvel[0], fd.fs.fgxvel[1]),
-             'fgyvel': (fd.fs.fgyvel[0], fd.fs.fgyvel[1]),
-             'fhxvel': (fd.fs.fhxvel[0], fd.fs.fhxvel[1]),
-             'fhyvel': (fd.fs.fhyvel[0], fd.fs.fhyvel[1]),
-             'frxvel': (fd.fs.frxvel[0], fd.fs.frxvel[1]),
-             'fryvel': (fd.fs.fryvel[0], fd.fs.fryvel[1])
+        d = {b'time': fd.fs.time,
+             b'px': (fd.fs.px[0], fd.fs.px[1]),
+             b'py': (fd.fs.py[0], fd.fs.py[1]),
+             b'hx': (fd.fs.hx[0], fd.fs.hx[1]),
+             b'hy': (fd.fs.hy[0], fd.fs.hy[1]),
+             b'gx': (fd.fs.gx[0], fd.fs.gx[1]),
+             b'gy': (fd.fs.gy[0], fd.fs.gy[1]),
+             b'pa': (fd.fs.pa[0], fd.fs.pa[1]),
+             b'rx': fd.fs.rx,
+             b'ry': fd.fs.ry,
+             b'gxvel': (fd.fs.gxvel[0], fd.fs.gxvel[1]),
+             b'gyvel': (fd.fs.gyvel[0], fd.fs.gyvel[1]),
+             b'hxvel': (fd.fs.hxvel[0], fd.fs.hxvel[1]),
+             b'hyvel': (fd.fs.hyvel[0], fd.fs.hyvel[1]),
+             b'rxvel': (fd.fs.rxvel[0], fd.fs.rxvel[1]),
+             b'ryvel': (fd.fs.ryvel[0], fd.fs.ryvel[1]),
+             b'fgxvel': (fd.fs.fgxvel[0], fd.fs.fgxvel[1]),
+             b'fgyvel': (fd.fs.fgyvel[0], fd.fs.fgyvel[1]),
+             b'fhxvel': (fd.fs.fhxvel[0], fd.fs.fhxvel[1]),
+             b'fhyvel': (fd.fs.fhyvel[0], fd.fs.fhyvel[1]),
+             b'frxvel': (fd.fs.frxvel[0], fd.fs.frxvel[1]),
+             b'fryvel': (fd.fs.fryvel[0], fd.fs.fryvel[1])
              }
 
     if d is None:
@@ -309,14 +346,14 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
     rd = {}
     for key, val in d.iteritems():
 
-        if key in filter + ['message']:
+        if key in filter + [b'message']:
             rd[key] = val
     return rd
 
 
 def to_eye(data):
-    if 'eye' in data.keys():
-        if  data['eye'] == 0:
+    if b'eye' in data.keys():
+        if  data[b'eye'] == 0:
             return data, {}
         else:
             return {}, data
@@ -327,8 +364,8 @@ def to_eye(data):
                 left[k] = v[0]
                 right[k] = v[1]
             except TypeError:
-                if k == 'gx':
-                    raise RuntimeError('///')
+                if k == b'gx':
+                    raise RuntimeError(b'///')
                 left[k] = v
                 right[k] = v
     return left, right

@@ -17,13 +17,21 @@ def pread(filename,
 
     Input is the same as fread(...)
     '''
+
     if pd is None:
         raise RuntimeError('Can not import pandas.')
     properties_filter = set(properties_filter).union(set(['time', 'start']))
+    filename = filename.encode('utf-8')
+    if filter == 'all':
+        filter = b'all'
+    else:
+        filter = [f.encode('utf-8') for f in filter]
+    split_char = split_char.encode('utf-8')
+    properties_filter=[p.encode('utf-8') for p in list(properties_filter)]
     left_events, right_events, messages = edfread.fread(
         filename, ignore_samples,
         filter, split_char,
-        properties_filter=list(properties_filter))
+        properties_filter=properties_filter)
 
     messages = pd.DataFrame(messages)
 
@@ -35,9 +43,9 @@ def pread(filename,
         # Join samples and events into one big data frame
         frames = []
         for event in events:
-            samples = pd.DataFrame(event['samples'])
-            samples['sample_time'] = samples['time']
-            for key in set(event.keys()) - set(['samples']):
+            samples = pd.DataFrame(event[b'samples'])
+            samples[b'sample_time'] = samples[b'time']
+            for key in set(event.keys()) - set([b'samples']):
                 samples[key] = event[key]
             frames.append(samples)
         return pd.concat(frames)

@@ -21,39 +21,30 @@ def pread(filename,
     if pd is None:
         raise RuntimeError('Can not import pandas.')
     properties_filter = set(properties_filter).union(set(['time', 'start']))
-    filename = filename.encode('utf-8')
-    if filter == 'all':
-        filter = b'all'
-    else:
-        filter = [f.encode('utf-8') for f in filter]
-    split_char = split_char.encode('utf-8')
-    properties_filter=[p.encode('utf-8') for p in list(properties_filter)]
-    left_events, right_events, messages = edfread.fread(
+    samples, events, messages = edfread.fread(
         filename, ignore_samples,
         filter, split_char,
-        properties_filter=properties_filter)
-
+        properties_filter=list(properties_filter))
+    events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
-
-    def join(events, ignore_samples):
-        if len(events)==0 or events is None:
-            return None
-        if ignore_samples:
-            return pd.DataFrame(events)
-        # Join samples and events into one big data frame
-        frames = []
-        for event in events:
-            samples = pd.DataFrame(event[b'samples'])
-            samples[b'sample_time'] = samples[b'time']
-            for key in set(event.keys()) - set([b'samples']):
-                samples[key] = event[key]
-            frames.append(samples)
-        return pd.concat(frames)
-    return  (join(left_events, ignore_samples),
-        join(right_events, ignore_samples),
-        pd.DataFrame(messages))
+    samples = pd.DataFrame(np.asarray(samples), columns=edfread.sample_columns)
+    return samples, events, messages
 
 
+def join(events, ignore_samples):
+    if len(events)==0 or events is None:
+        return None
+    if ignore_samples:
+        return pd.DataFrame(events)
+    # Join samples and events into one big data frame
+    frames = []
+    for event in events:
+        samples = pd.DataFrame(event['samples'])
+        samples['sample_time'] = samples['time']
+        for key in set(event.keys()) - set(['samples']):
+            samples[key] = event[key]
+        frames.append(samples)
+    return pd.concat(frames)
 
 def remove_time_fields(events):
     '''

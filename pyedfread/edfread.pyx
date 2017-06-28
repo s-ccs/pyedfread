@@ -17,6 +17,7 @@ from pyedfread.data cimport fsample_fs
 from sampledict import SampleAccumulator
 
 import pandas as pd
+import struct
 
 try:
     import progressbar
@@ -33,6 +34,13 @@ type2label = {STARTFIX: 'fixation', STARTSACC: 'saccade', STARTBLINK: 'blink',
               ENDFIX: 'fixation', ENDSACC: 'saccade', ENDBLINK: 'blink',
               MESSAGEEVENT: 'message'}
 
+sample_columns = ['time', 'px_left', 'px_right', 'py_left', 'py_right',
+    'hx_left', 'hx_right', 'hy_left', 'hy_right', 'pa_left', 'pa_right',
+    'gx_left', 'gx_right', 'gy_left', 'gy_right', 'rx', 'ry',
+    'gxvel_left', 'gxvel_right', 'gyvel_left', 'gyvel_right', 'hxvel_left', 'hxvel_right',
+    'hyvel_left', 'hyvel_right', 'rxvel_left', 'rxvel_right', 'ryvel_left', 'ryvel_right',
+    'fgxvel', 'fgyvel', 'fhxyvel', 'fhyvel',  'frxyvel', 'fryvel',
+    'flags', 'input', 'buttons', 'htype', 'errors']
 
 cdef extern from "edf.h":
     ctypedef int EDFFILE
@@ -100,82 +108,10 @@ def fread(filename,
 
     if 'eye' not in properties_filter:
         properties_filter.append('eye')
-
-    cdef int errval = 1
-    cdef char* buf = <char*> malloc(1024 * sizeof(char))
-    cdef int* ef
-    cdef int sample_type
-
-    left_ev, right_ev = {'samples': SampleAccumulator()}, {'samples': SampleAccumulator()}
-    left_acc, right_acc = [], []
-    current_messages = {}
-    message_accumulator = []
-
-    ef = edf_open_file(filename, 0, 1, 1, &errval)
-    if errval < 0:
-        print filename, ' could not be openend.'
-        raise IOError('Could not open: %s'%filename)
-    e = edf_get_preamble_text(ef, buf, 1024)
-    num_elements = edf_get_element_count(ef)
-    if progressbar is not None:
-        bar = progressbar.ProgressBar(num_elements).start()
-        cnt = 0
-
-    trial = 0
-    while True:
-        sample_type = edf_get_next_data(ef)
-        data = data2dict(sample_type, ef, filter=properties_filter)
-
-        if sample_type == MESSAGEEVENT:
-            trial, current_messages, message_accumulator = parse_message(
-                data, trial, current_messages, message_accumulator, split_char, filter)
-
-        elif sample_type == NO_PENDING_ITEMS and len(current_messages.keys()) > 0:
-                current_messages['trial'] = trial
-                message_accumulator.append(unbox_messages(current_messages))
-        else:
-            left, right = to_eye(data)
-            left_ev, left_acc = parse_datum(
-                                            left, sample_type,
-                                            trial, split_char,
-                                            filter, ignore_samples,
-                                            left_ev, left_acc)
-            right_ev, right_acc = parse_datum(
-                                            right, sample_type,
-                                            trial, split_char,
-                                            filter, ignore_samples,
-                                            right_ev, right_acc)
-
-        if sample_type == NO_PENDING_ITEMS:
-            edf_close_file(ef)
-            break
-        if progressbar is not None:
-            bar.update(cnt)
-            cnt += 1
-    free(buf)
-    if not ignore_samples:
-        for i in range(len(left_acc)):
-            left_acc[i]['samples'] = left_acc[i]['samples'].get_dict()
-        for i in range(len(right_acc)):
-            right_acc[i]['samples'] = right_acc[i]['samples'].get_dict()
-    return left_acc, right_acc, message_accumulator
+    return st(filename, ignore_samples, filter, split_char.encode('utf-8'), properties_filter)
 
 
-import struct
-
-
-def speed_test(filename,
-          ignore_samples=False,
-          filter=[],
-          split_char=' ',
-          properties_filter=['type', 'time', 'sttime',
-                             'entime', 'gx', 'gy', 'gstx', 'gsty', 'genx',
-                             'geny', 'gxvel', 'gyvel', 'start', 'end', 'gavx',
-                             'gavy', 'eye']):
-    st(filename, filter, split_char, properties_filter)
-
-
-cdef st(filename, filter, split_char, properties_filter):
+cdef st(filename, ignore_samples, filter, split_char, properties_filter):
     cdef int errval = 1
     cdef char* buf = <char*> malloc(1024 * sizeof(char))
     cdef int* ef
@@ -183,35 +119,41 @@ cdef st(filename, filter, split_char, properties_filter):
 
     left_acc, right_acc = [], []
     current_messages = {}
+    current_event = {}
     message_accumulator = []
-
-    ef = edf_open_file(filename, 0, 1, 1, &errval)
+    event_accumulator = []
+    ef = edf_open_file(filename.encode('utf-8'), 0, 1, 1, &errval)
     if errval < 0:
         print filename, ' could not be openend.'
         raise IOError('Could not open: %s'%filename)
     e = edf_get_preamble_text(ef, buf, 1024)
     num_elements = edf_get_element_count(ef)
-    cdef np.ndarray npsamples = np.ndarray((num_elements,  54), dtype=np.float64)
+    cdef np.ndarray npsamples = np.ndarray((num_elements,  40), dtype=np.float64)
     cdef np.float64_t[:, :] samples = npsamples
 
     trial = 0
     cnt=0
     cdef int i=0
     cdef int pt
+
     while True:
         sample_type = edf_get_next_data(ef)
+        if sample_type == NO_PENDING_ITEMS:
+            edf_close_file(ef)
+            break
+
         if (sample_type == SAMPLE_TYPE):
             fd = edf_get_float_data(ef)
-            samples[cnt, 0] = fd.fs.time  # time of sample
-            samples[cnt, 1] = fd.fs.px[0]
-            samples[cnt, 2] = fd.fs.px[1]
-            samples[cnt, 3] = fd.fs.py[0]
-            samples[cnt, 4] = fd.fs.py[1]
-            samples[cnt, 5] = fd.fs.hx[0]
-            samples[cnt, 6] = fd.fs.hx[1]
-            samples[cnt, 7] = fd.fs.hy[0]
-            samples[cnt, 8] = fd.fs.hy[1]
-            samples[cnt, 9] = fd.fs.pa[0]
+            samples[cnt, 0] = float(fd.fs.time)  # time of sample
+            samples[cnt, 1] = float(fd.fs.px[0])
+            samples[cnt, 2] = float(fd.fs.px[1])
+            samples[cnt, 3] = float(fd.fs.py[0])
+            samples[cnt, 4] = float(fd.fs.py[1])
+            samples[cnt, 5] = float(fd.fs.hx[0])
+            samples[cnt, 6] = float(fd.fs.hx[1])
+            samples[cnt, 7] = float(fd.fs.hy[0])
+            samples[cnt, 8] = float(fd.fs.hy[1])
+            samples[cnt, 9] = float(fd.fs.pa[0])
             samples[cnt, 10] = fd.fs.pa[1]
             samples[cnt, 11] = fd.fs.gx[0]
             samples[cnt, 12] = fd.fs.gx[1]
@@ -234,30 +176,34 @@ cdef st(filename, filter, split_char, properties_filter):
             samples[cnt, 28] = fd.fs.ryvel[1]
 
             samples[cnt, 29] = fd.fs.fgxvel[0]
-            samples[cnt, 30] = fd.fs.fgyvel[1]
+            samples[cnt, 30] = fd.fs.fgyvel[0]
             samples[cnt, 31] = fd.fs.fhxvel[0]
-            samples[cnt, 32] = fd.fs.fhyvel[1]
+            samples[cnt, 32] = fd.fs.fhyvel[0]
             samples[cnt, 33] = fd.fs.frxvel[0]
-            samples[cnt, 34] = fd.fs.fryvel[1]
+            samples[cnt, 34] = fd.fs.fryvel[0]
 
             #samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data (not prescaled)
-            samples[cnt, 48] = fd.fs.flags #flags to indicate contents
-            samples[cnt, 49] = fd.fs.input #extra (input word)
-            samples[cnt, 50] = fd.fs.buttons # button state & changes
-            samples[cnt, 51] = fd.fs.htype #head-tracker data type
-            samples[cnt, 52] = fd.fs.errors
+            samples[cnt, 35] = fd.fs.flags #flags to indicate contents
+            samples[cnt, 36] = fd.fs.input #extra (input word)
+            samples[cnt, 37] = fd.fs.buttons # button state & changes
+            samples[cnt, 38] = fd.fs.htype #head-tracker data type
+            samples[cnt, 39] = fd.fs.errors
             cnt+=1
 
-        if sample_type == MESSAGEEVENT:
+        elif sample_type == MESSAGEEVENT:
             data = data2dict(sample_type, ef, filter=properties_filter)
             trial, current_messages, message_accumulator = parse_message(
                 data, trial, current_messages, message_accumulator, split_char, filter)
 
-        if sample_type == NO_PENDING_ITEMS:
-            edf_close_file(ef)
-            break
+        else:
+            data = data2dict(sample_type, ef, filter=properties_filter)
+            current_event, event_accumulator = parse_datum(data, sample_type,
+                trial, split_char, filter, ignore_samples, current_event, event_accumulator)
+
+        i = i+1
     free(buf)
-    
+    return samples, event_accumulator, message_accumulator
+
 
 
 
@@ -268,12 +214,11 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
     '''
     if len(data) == 0:
         return current_event, event_accumulator
+
     if (sample_type == STARTFIX) or (sample_type == STARTSACC):
         current_event = data
         current_event['blink'] = False
         current_event['trial'] = trial
-        if not ignore_samples:
-            current_event['samples'] =  SampleAccumulator()
 
     if (sample_type == ENDFIX) or (sample_type == ENDSACC):
         current_event.update(data)
@@ -282,15 +227,12 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
     if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
         current_event['blink'] = True
 
-    if (sample_type == SAMPLE_TYPE) and not ignore_samples:
-        data['trial'] = trial
-        current_event['samples'].update(data)
 
     return current_event, event_accumulator
 
 
 def parse_message(data, trial, current_messages, message_accumulator, split_char, filter):
-    if data['message'].startswith('TRIALID'):
+    if data['message'].startswith(b'TRIALID'):
         if (trial > 0) and (len(current_messages.keys()) > 0):
             current_messages['trial'] = trial
             message_accumulator.append(unbox_messages(current_messages))
@@ -299,30 +241,30 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
         current_messages['trialid '] = data['message']
         current_messages['trialid_time'] = data['start']
 
-    elif data['message'].startswith('SYNCTIME'):
+    elif data['message'].startswith(b'SYNCTIME'):
         current_messages['SYNCTIME'] = data['start']
         current_messages['SYNCTIME_start'] = data['start']
 
-    elif data['message'].startswith('DRIFTCORRECT'):
+    elif data['message'].startswith(b'DRIFTCORRECT'):
         current_messages['DRIFTCORRECT'] = data['message']
 
-    elif data['message'].startswith('METATR'):
-        parts = data['message'].split(' ')
+    elif data['message'].startswith(b'METATR'):
+        parts = data['message'].split(b' ')
         msg, key = parts[0], parts[1]
         if len(parts) == 3:
-            value = parts[2].strip().replace('\x00', '')
+            value = parts[2].strip().replace(b'\x00', b'')
         else:
             value = str(parts[2:])
-        current_messages[key + '_message_send_time'] = data['start']
+        current_messages[key + b'_message_send_time'] = data['start']
         try:
-            current_messages[key] = string.atof(value)
+            current_messages[key] = float(value)
         except (TypeError, ValueError):
             current_messages[key] = value
     else:
         # These are messageevents that accumulate during a fixation.
         # I treat them as key value pairs
 
-        msg = data['message'].strip().replace('\x00', '').split(split_char)
+        msg = data['message'].strip().replace(b'\x00', b'').split(split_char)
         if filter == 'all' or msg[0] in filter:
             try:
                 value = [string.atof(v) for v in msg[1:]]
@@ -338,7 +280,7 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
 
             if key not in current_messages.keys():
                 current_messages[key] = []
-                current_messages[key+'_time'] = []
+                current_messages[key+b'_time'] = []
             current_messages[key].append(value)
             current_messages[key+'_time'].append(data['start'])
     return trial, current_messages, message_accumulator
@@ -363,10 +305,11 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
        (sample_type == ENDBLINK) or
        (sample_type == MESSAGEEVENT)):
         message = ''
-
         if <int>fd.fe.message != 0:
             msg = &fd.fe.message.c
             message = msg[:fd.fe.message.len]
+        print(fd.fe.time, fd.fe.type, fd.fe.eye)
+        print(fd.fe.sttime)
         d = {'time': fd.fe.time, 'type': type2label[sample_type],
              'start': fd.fe.sttime, 'end': fd.fe.entime,
              'hstx': fd.fe.hstx, 'hsty': fd.fe.hsty,
@@ -383,29 +326,28 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
              }
     if sample_type == SAMPLE_TYPE:
         d = {'time': fd.fs.time,
-             'px': (fd.fs.px[0], fd.fs.px[1]),
-             'py': (fd.fs.py[0], fd.fs.py[1]),
-             'hx': (fd.fs.hx[0], fd.fs.hx[1]),
-             'hy': (fd.fs.hy[0], fd.fs.hy[1]),
-             'gx': (fd.fs.gx[0], fd.fs.gx[1]),
-             'gy': (fd.fs.gy[0], fd.fs.gy[1]),
-             'pa': (fd.fs.pa[0], fd.fs.pa[1]),
-             'rx': fd.fs.rx,
-             'ry': fd.fs.ry,
-             'gxvel': (fd.fs.gxvel[0], fd.fs.gxvel[1]),
-             'gyvel': (fd.fs.gyvel[0], fd.fs.gyvel[1]),
-             'hxvel': (fd.fs.hxvel[0], fd.fs.hxvel[1]),
-             'hyvel': (fd.fs.hyvel[0], fd.fs.hyvel[1]),
-             'rxvel': (fd.fs.rxvel[0], fd.fs.rxvel[1]),
-             'ryvel': (fd.fs.ryvel[0], fd.fs.ryvel[1]),
-             'fgxvel': (fd.fs.fgxvel[0], fd.fs.fgxvel[1]),
-             'fgyvel': (fd.fs.fgyvel[0], fd.fs.fgyvel[1]),
-             'fhxvel': (fd.fs.fhxvel[0], fd.fs.fhxvel[1]),
-             'fhyvel': (fd.fs.fhyvel[0], fd.fs.fhyvel[1]),
-             'frxvel': (fd.fs.frxvel[0], fd.fs.frxvel[1]),
-             'fryvel': (fd.fs.fryvel[0], fd.fs.fryvel[1])
-             }
-
+         'px': (fd.fs.px[0], fd.fs.px[1]),
+         'py': (fd.fs.py[0], fd.fs.py[1]),
+         'hx': (fd.fs.hx[0], fd.fs.hx[1]),
+         'hy': (fd.fs.hy[0], fd.fs.hy[1]),
+         'gx': (fd.fs.gx[0], fd.fs.gx[1]),
+         'gy': (fd.fs.gy[0], fd.fs.gy[1]),
+         'pa': (fd.fs.pa[0], fd.fs.pa[1]),
+         'rx': fd.fs.rx,
+         'ry': fd.fs.ry,
+         'gxvel': (fd.fs.gxvel[0], fd.fs.gxvel[1]),
+         'gyvel': (fd.fs.gyvel[0], fd.fs.gyvel[1]),
+         'hxvel': (fd.fs.hxvel[0], fd.fs.hxvel[1]),
+         'hyvel': (fd.fs.hyvel[0], fd.fs.hyvel[1]),
+         'rxvel': (fd.fs.rxvel[0], fd.fs.rxvel[1]),
+         'ryvel': (fd.fs.ryvel[0], fd.fs.ryvel[1]),
+         'fgxvel': (fd.fs.fgxvel[0], fd.fs.fgxvel[1]),
+         'fgyvel': (fd.fs.fgyvel[0], fd.fs.fgyvel[1]),
+         'fhxvel': (fd.fs.fhxvel[0], fd.fs.fhxvel[1]),
+         'fhyvel': (fd.fs.fhyvel[0], fd.fs.fhyvel[1]),
+         'frxvel': (fd.fs.frxvel[0], fd.fs.frxvel[1]),
+         'fryvel': (fd.fs.fryvel[0], fd.fs.fryvel[1])
+}
     if d is None:
         return {}
     rd = {}

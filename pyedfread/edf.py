@@ -26,6 +26,7 @@ def pread(filename,
         properties_filter=list(properties_filter))
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
+    samples = pd.DataFrame(np.asarray(samples), columns=edfread.sample_columns)
     return samples, events, messages
 
 

@@ -11,10 +11,10 @@ from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 from libc.stdlib cimport malloc, free
 
 from pyedfread.edf_data import *
-from pyedfread.data cimport FSAMPLE, FEVENT, ALLF_DATA, FS
-from pyedfread.data cimport fsample_fs
+from pyedfread.data cimport ALLF_DATA #FSAMPLE, FEVENT, ALLF_DATA, FS
+#from pyedfread.data cimport fsample_fs
 
-from sampledict import SampleAccumulator
+#from sampledict import SampleAccumulator
 
 import pandas as pd
 import struct
@@ -200,11 +200,8 @@ cdef st(filename, ignore_samples, filter, split_char, properties_filter):
             current_event, event_accumulator = parse_datum(data, sample_type,
                 trial, split_char, filter, ignore_samples, current_event, event_accumulator)
 
-        i = i+1
     free(buf)
     return samples, event_accumulator, message_accumulator
-
-
 
 
 def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
@@ -226,7 +223,6 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
 
     if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
         current_event['blink'] = True
-
 
     return current_event, event_accumulator
 
@@ -267,7 +263,7 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
         msg = data['message'].strip().replace(b'\x00', b'').split(split_char)
         if filter == 'all' or msg[0] in filter:
             try:
-                value = [string.atof(v) for v in msg[1:]]
+                value = [float(v) for v in msg[1:]]
             except ValueError:
                 value = msg[1:]
 
@@ -282,7 +278,7 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
                 current_messages[key] = []
                 current_messages[key+b'_time'] = []
             current_messages[key].append(value)
-            current_messages[key+'_time'].append(data['start'])
+            current_messages[key+b'_time'].append(data['start'])
     return trial, current_messages, message_accumulator
 
 
@@ -308,8 +304,7 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
         if <int>fd.fe.message != 0:
             msg = &fd.fe.message.c
             message = msg[:fd.fe.message.len]
-        print(fd.fe.time, fd.fe.type, fd.fe.eye)
-        print(fd.fe.sttime)
+
         d = {'time': fd.fe.time, 'type': type2label[sample_type],
              'start': fd.fe.sttime, 'end': fd.fe.entime,
              'hstx': fd.fe.hstx, 'hsty': fd.fe.hsty,
@@ -324,6 +319,7 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
              'evel': fd.fe.evel, 'supd_x': fd.fe.supd_x, 'eupd_x': fd.fe.eupd_x,
              'eye': fd.fe.eye, 'buttons': fd.fe.buttons, 'message': message,
              }
+    '''
     if sample_type == SAMPLE_TYPE:
         d = {'time': fd.fs.time,
          'px': (fd.fs.px[0], fd.fs.px[1]),
@@ -347,7 +343,8 @@ cdef data2dict(sample_type, int* ef, filter=['type', 'time', 'sttime',
          'fhyvel': (fd.fs.fhyvel[0], fd.fs.fhyvel[1]),
          'frxvel': (fd.fs.frxvel[0], fd.fs.frxvel[1]),
          'fryvel': (fd.fs.fryvel[0], fd.fs.fryvel[1])
-}
+         }
+    '''
     if d is None:
         return {}
     rd = {}

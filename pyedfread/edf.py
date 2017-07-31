@@ -2,7 +2,7 @@ from pyedfread import edfread
 import numpy as np
 import pandas as pd
 import h5py
-
+import os
 
 def pread(filename,
           ignore_samples=False,
@@ -37,6 +37,9 @@ def pread(filename,
 
     split_char : Character used to split metadata messages.
     '''
+    if not os.path.isfile(filename):
+        raise RuntimeError('File "%s" does not exist'%filename)
+
     if pd is None:
         raise RuntimeError('Can not import pandas.')
 

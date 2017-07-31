@@ -65,10 +65,10 @@ def fread(filename,
 
     For documentation see edf.pread()
     '''
-    return st(filename, ignore_samples, filter, split_char)
+    return parse_edf(filename, ignore_samples, filter, split_char)
 
 
-cdef st(filename, ignore_samples, filter, split_char):
+cdef parse_edf(filename, ignore_samples, filter, split_char):
     cdef int errval = 1
     cdef char* buf = <char*> malloc(1024 * sizeof(char))
     cdef int* ef

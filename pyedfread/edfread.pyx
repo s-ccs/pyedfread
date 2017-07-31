@@ -57,12 +57,12 @@ def read_preamble(filename, consistency=0):
 
 
 def read_calibration(filename, consistency=0):
+    '''
+    Read calibration/validation messages from EDF file.
+    '''
     cdef int errval = 1
     cdef int* ef
     cdef char* msg
-
-    #cdef char* buf = <char*> malloc(1024 * sizeof(char))
-
     ef = edf_open_file(filename, consistency, 1, 1, &errval)
     if errval < 0:
         raise IOError('Could not open: %s'%filename)
@@ -82,7 +82,7 @@ def read_calibration(filename, consistency=0):
                 msg = &fd.fe.message.c
                 message = msg[:fd.fe.message.len]
                 if message.startswith(b'!CAL') or message.startswith(b'!VAL'):
-                    messages.append(message)    
+                    messages.append(message)
     return messages
 
 

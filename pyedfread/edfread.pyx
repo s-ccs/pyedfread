@@ -56,6 +56,36 @@ def read_preamble(filename, consistency=0):
     return buf
 
 
+def read_calibration(filename, consistency=0):
+    '''
+    Read calibration/validation messages from EDF file.
+    '''
+    cdef int errval = 1
+    cdef int* ef
+    cdef char* msg
+    ef = edf_open_file(filename, consistency, 1, 1, &errval)
+    if errval < 0:
+        raise IOError('Could not open: %s'%filename)
+
+    messages =[]
+    samples = []
+    while True:
+        sample_type = edf_get_next_data(ef)
+        if sample_type == NO_PENDING_ITEMS:
+            edf_close_file(ef)
+            break
+        samples.append(sample_type)
+        if sample_type == MESSAGEEVENT or sample_type == RECORDING_INFO:
+            fd = edf_get_float_data(ef)
+            message = ''
+            if <int>fd.fe.message != 0:
+                msg = &fd.fe.message.c
+                message = msg[:fd.fe.message.len]
+                if message.startswith(b'!CAL') or message.startswith(b'!VAL'):
+                    messages.append(message)
+    return messages
+
+
 def fread(filename,
           ignore_samples=False,
           filter=[],

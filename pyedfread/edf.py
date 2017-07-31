@@ -79,9 +79,11 @@ def save_human_understandable(samples, events, messages, path):
                 except TypeError:
                     # Probably a string that can not be saved in hdf.
                     # Map to numbers and save mapping in attrs.
-                    column = data[field].values
+                    column = data[field].values.astype(str)
                     mapping = dict((key, i) for i, key in enumerate(np.unique(column)))
-                    fm_group.create_dataset(field, data=np.array([mapping[val] for val in column]))
+                    fm_group.create_dataset(field,
+                        data=np.array([mapping[val] for val in column]))
                     fm_group.attrs[field+'mapping'] = str(mapping)
+
     finally:
         f.close()

@@ -41,7 +41,7 @@ From python
 
 After compilation run the following lines for a quick test.
 
-    >>> import edf
+    >>> from pyedfread import edf
     >>> samples, events, messages = edf.pread('SUB001.EDF')
 
 This opens SUB001.EDF and parses it three two DataFrames:

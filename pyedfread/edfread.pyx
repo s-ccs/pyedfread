@@ -120,7 +120,7 @@ cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
 
     cdef np.ndarray npsamples = np.ndarray((num_elements,  40), dtype=np.float64)
     cdef np.float64_t[:, :] samples = npsamples
-    trial, cnt = 0, 0
+    trial, cnt = -1, 0
 
     while True:
         sample_type = edf_get_next_data(ef)
@@ -181,13 +181,19 @@ cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
         elif sample_type == MESSAGEEVENT:
             data = data2dict(sample_type, ef)
             trial, current_messages, message_accumulator = parse_message(
-                data, trial, current_messages, message_accumulator, split_char, filter, trial_marker)
+                data, trial, current_messages, message_accumulator,
+                split_char, filter, trial_marker)
 
         else:
             data = data2dict(sample_type, ef)
-            current_event, event_accumulator = parse_datum(data, sample_type,
-                                                           trial, split_char, filter, ignore_samples, current_event, event_accumulator)
-
+            current_event, event_accumulator = parse_datum(data,
+                                                           sample_type,
+                                                           trial,
+                                                           split_char,
+                                                           filter,
+                                                           ignore_samples,
+                                                           current_event,
+                                                           event_accumulator)
     free(buf)
     return samples, event_accumulator, message_accumulator
 
@@ -214,13 +220,17 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
     return current_event, event_accumulator
 
 
-def parse_message(data, trial, current_messages, message_accumulator, split_char, filter, trial_marker):
+def parse_message(data, trial, current_messages, message_accumulator,
+                  split_char, filter, trial_marker):
     if data['message'].startswith(trial_marker):
-        if (trial > 0) and (len(current_messages.keys()) > 0):
-            current_messages['trial'] = trial
+        if (trial <= 0) and (len(current_messages.keys()) > 0):
+            current_messages['py_trial_marker'] = trial
             message_accumulator.append(current_messages)
-        trial += 1
-        current_messages = {}
+            trial = 1
+        else:
+            trial += 1
+        current_messages = {'py_trial_marker': trial}
+        message_accumulator.append(current_messages)
         current_messages['trialid '] = data['message'].decode(
             'utf-8').strip().replace('\x00', '')
         current_messages['trialid_time'] = data['start']
@@ -275,7 +285,9 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
                 except (AttributeError, TypeError) as e:
                     current_messages[key] = [current_messages[key], value]
                     current_messages[
-                        key + '_time'] = [current_messages[key + '_time'], data['start']]
+                        key + '_time'] = [current_messages[key + '_time'],
+                                          data['start']]
+
     return trial, current_messages, message_accumulator
 
 

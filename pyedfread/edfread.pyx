@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # cython: profile=True
 '''
-Reads SR Research EDF files and parses them into ocupy datamats.
+Reads SR Research EDF files and parses them into a list of dicts.
 '''
 cimport numpy as np
 import numpy as np
@@ -22,21 +22,21 @@ type2label = {STARTFIX: 'fixation', STARTSACC: 'saccade', STARTBLINK: 'blink',
 
 
 sample_columns = ['time', 'px_left', 'px_right', 'py_left', 'py_right',
-    'hx_left', 'hx_right', 'hy_left', 'hy_right', 'pa_left', 'pa_right',
-    'gx_left', 'gx_right', 'gy_left', 'gy_right', 'rx', 'ry',
-    'gxvel_left', 'gxvel_right', 'gyvel_left', 'gyvel_right', 'hxvel_left', 'hxvel_right',
-    'hyvel_left', 'hyvel_right', 'rxvel_left', 'rxvel_right', 'ryvel_left', 'ryvel_right',
-    'fgxvel', 'fgyvel', 'fhxyvel', 'fhyvel',  'frxyvel', 'fryvel',
-    'flags', 'input', 'buttons', 'htype', 'errors']
+                  'hx_left', 'hx_right', 'hy_left', 'hy_right', 'pa_left', 'pa_right',
+                  'gx_left', 'gx_right', 'gy_left', 'gy_right', 'rx', 'ry',
+                  'gxvel_left', 'gxvel_right', 'gyvel_left', 'gyvel_right', 'hxvel_left', 'hxvel_right',
+                  'hyvel_left', 'hyvel_right', 'rxvel_left', 'rxvel_right', 'ryvel_left', 'ryvel_right',
+                  'fgxvel', 'fgyvel', 'fhxyvel', 'fhyvel',  'frxyvel', 'fryvel',
+                  'flags', 'input', 'buttons', 'htype', 'errors']
 
 
 cdef extern from "edf.h":
     ctypedef int EDFFILE
     int * edf_open_file(const char * fname, int consistency, int load_events,
                         int load_samples, int * errval)
-    int edf_get_preamble_text_length (EDFFILE * edf);
+    int edf_get_preamble_text_length(EDFFILE * edf)
     int edf_get_preamble_text(EDFFILE * ef,
-                               char * buffer, int length)
+                              char * buffer, int length)
     int edf_get_next_data(EDFFILE * ef)
     ALLF_DATA * edf_get_float_data(EDFFILE * ef)
     int edf_get_element_count(EDFFILE * ef)
@@ -45,12 +45,12 @@ cdef extern from "edf.h":
 
 def read_preamble(filename, consistency=0):
     cdef int errval = 1
-    cdef int* ef
-    ef = edf_open_file(filename, consistency, 1, 1, &errval)
+    cdef int * ef
+    ef = edf_open_file(filename.encode('utf-8'), consistency, 1, 1, & errval)
     if errval < 0:
-        raise IOError('Could not open: %s'%filename)
+        raise IOError('Could not open: %s' % filename)
     cdef int psize = edf_get_preamble_text_length(ef)
-    cdef char* buf = <char*> malloc(psize * sizeof(char))
+    cdef char * buf = <char * > malloc(psize * sizeof(char))
     e = edf_get_preamble_text(ef, buf, psize)
     edf_close_file(ef)
     return buf
@@ -61,13 +61,13 @@ def read_calibration(filename, consistency=0):
     Read calibration/validation messages from EDF file.
     '''
     cdef int errval = 1
-    cdef int* ef
-    cdef char* msg
-    ef = edf_open_file(filename, consistency, 1, 1, &errval)
+    cdef int * ef
+    cdef char * msg
+    ef = edf_open_file(filename.encode('utf-8'), consistency, 1, 1, & errval)
     if errval < 0:
-        raise IOError('Could not open: %s'%filename)
+        raise IOError('Could not open: %s' % filename)
 
-    messages =[]
+    messages = []
     samples = []
     while True:
         sample_type = edf_get_next_data(ef)
@@ -78,7 +78,7 @@ def read_calibration(filename, consistency=0):
         if sample_type == MESSAGEEVENT or sample_type == RECORDING_INFO:
             fd = edf_get_float_data(ef)
             message = ''
-            if <int>fd.fe.message != 0:
+            if < int > fd.fe.message != 0:
                 msg = &fd.fe.message.c
                 message = msg[:fd.fe.message.len]
                 if message.startswith(b'!CAL') or message.startswith(b'!VAL'):
@@ -89,19 +89,20 @@ def read_calibration(filename, consistency=0):
 def fread(filename,
           ignore_samples=False,
           filter=[],
-          split_char=' '):
+          split_char=' ',
+          trial_marker=b'TRIALID'):
     '''
     Read an EDF file into a list of dicts.
 
     For documentation see edf.pread()
     '''
-    return parse_edf(filename, ignore_samples, filter, split_char)
+    return parse_edf(filename, ignore_samples, filter, split_char, trial_marker)
 
 
-cdef parse_edf(filename, ignore_samples, filter, split_char):
+cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
     cdef int errval = 1
-    cdef char* buf = <char*> malloc(1024 * sizeof(char))
-    cdef int* ef
+    cdef char * buf = <char * > malloc(1024 * sizeof(char))
+    cdef int * ef
     cdef int sample_type, cnt, trial
 
     left_acc, right_acc = [], []
@@ -109,9 +110,9 @@ cdef parse_edf(filename, ignore_samples, filter, split_char):
     current_event = {}
     message_accumulator = []
     event_accumulator = []
-    ef = edf_open_file(filename.encode('utf-8'), 0, 1, 1, &errval)
+    ef = edf_open_file(filename.encode('utf-8'), 0, 1, 1, & errval)
     if errval < 0:
-        raise IOError('Could not open: %s'%filename)
+        raise IOError('Could not open: %s' % filename)
     e = edf_get_preamble_text(ef, buf, 1024)
     num_elements = edf_get_element_count(ef)
     if ignore_samples:
@@ -168,30 +169,31 @@ cdef parse_edf(filename, ignore_samples, filter, split_char):
             samples[cnt, 33] = fd.fs.frxvel[0]
             samples[cnt, 34] = fd.fs.fryvel[0]
 
-            #samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data (not prescaled)
-            samples[cnt, 35] = fd.fs.flags #flags to indicate contents
-            samples[cnt, 36] = fd.fs.input #extra (input word)
-            samples[cnt, 37] = fd.fs.buttons # button state & changes
-            samples[cnt, 38] = fd.fs.htype #head-tracker data type
+            # samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data
+            # (not prescaled)
+            samples[cnt, 35] = fd.fs.flags  # flags to indicate contents
+            samples[cnt, 36] = fd.fs.input  # extra (input word)
+            samples[cnt, 37] = fd.fs.buttons  # button state & changes
+            samples[cnt, 38] = fd.fs.htype  # head-tracker data type
             samples[cnt, 39] = fd.fs.errors
-            cnt+=1
+            cnt += 1
 
         elif sample_type == MESSAGEEVENT:
             data = data2dict(sample_type, ef)
             trial, current_messages, message_accumulator = parse_message(
-                data, trial, current_messages, message_accumulator, split_char, filter)
+                data, trial, current_messages, message_accumulator, split_char, filter, trial_marker)
 
         else:
             data = data2dict(sample_type, ef)
             current_event, event_accumulator = parse_datum(data, sample_type,
-                trial, split_char, filter, ignore_samples, current_event, event_accumulator)
+                                                           trial, split_char, filter, ignore_samples, current_event, event_accumulator)
 
     free(buf)
     return samples, event_accumulator, message_accumulator
 
 
 def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
-    current_event, event_accumulator):
+                current_event, event_accumulator):
     '''
     Parse a datum into data structures.
     '''
@@ -212,14 +214,15 @@ def parse_datum(data, sample_type, trial, split_char, filter, ignore_samples,
     return current_event, event_accumulator
 
 
-def parse_message(data, trial, current_messages, message_accumulator, split_char, filter):
-    if data['message'].startswith(b'TRIALID'):
+def parse_message(data, trial, current_messages, message_accumulator, split_char, filter, trial_marker):
+    if data['message'].startswith(trial_marker):
         if (trial > 0) and (len(current_messages.keys()) > 0):
             current_messages['trial'] = trial
             message_accumulator.append(current_messages)
         trial += 1
         current_messages = {}
-        current_messages['trialid '] = data['message'].decode('utf-8').strip().replace('\x00', '')
+        current_messages['trialid '] = data['message'].decode(
+            'utf-8').strip().replace('\x00', '')
         current_messages['trialid_time'] = data['start']
 
     elif data['message'].startswith(b'SYNCTIME'):
@@ -227,10 +230,12 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
         current_messages['SYNCTIME_start'] = data['start']
 
     elif data['message'].startswith(b'DRIFTCORRECT'):
-        current_messages['DRIFTCORRECT'] = data['message'].decode('utf-8').strip().replace('\x00', '')
+        current_messages['DRIFTCORRECT'] = data[
+            'message'].decode('utf-8').strip().replace('\x00', '')
 
     elif data['message'].startswith(b'METATR'):
-        parts = data['message'].decode('utf-8').strip().replace('\x00', '').split(' ')
+        parts = data['message'].decode(
+            'utf-8').strip().replace('\x00', '').split(' ')
         msg, key = parts[0], parts[1]
         if len(parts) == 3:
             value = parts[2]
@@ -244,7 +249,9 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
     else:
         # These are messageevents that accumulate during a fixation.
         # I treat them as key value pairs
-        msg = data['message'].decode('utf-8').strip().replace('\x00', '').split(split_char)
+        msg = data['message'].decode(
+            'utf-8').strip().replace('\x00', '').split(split_char)
+
         if filter == 'all' or msg[0] in filter:
             try:
                 value = [float(v) for v in msg[1:]]
@@ -263,30 +270,31 @@ def parse_message(data, trial, current_messages, message_accumulator, split_char
                 current_messages[key + '_time'] = data['start']
             else:
                 try:
-                    current_messages[key].append(value)
-                    current_messages[key + '_time'].append(data['start'])
-                else:
-                    current_messages[key].append([current_messages[key], value])
-                    current_messages[key + '_time'].append([current_messages[key], data['start']])
+                    current_messages[key].extend(value)
+                    current_messages[key + '_time'].extend(data['start'])
+                except (AttributeError, TypeError) as e:
+                    current_messages[key] = [current_messages[key], value]
+                    current_messages[
+                        key + '_time'] = [current_messages[key + '_time'], data['start']]
     return trial, current_messages, message_accumulator
 
 
-cdef data2dict(sample_type, int* ef):
+cdef data2dict(sample_type, int * ef):
     '''
     Converts EDF event to dictionary.
     '''
     fd = edf_get_float_data(ef)
-    cdef char* msg
+    cdef char * msg
     d = None
     if ((sample_type == STARTFIX) or
-       (sample_type == STARTSACC) or
-       (sample_type == STARTBLINK) or
-       (sample_type == ENDFIX) or
-       (sample_type == ENDSACC) or
-       (sample_type == ENDBLINK) or
-       (sample_type == MESSAGEEVENT)):
+            (sample_type == STARTSACC) or
+            (sample_type == STARTBLINK) or
+            (sample_type == ENDFIX) or
+            (sample_type == ENDSACC) or
+            (sample_type == ENDBLINK) or
+            (sample_type == MESSAGEEVENT)):
         message = ''
-        if <int>fd.fe.message != 0:
+        if < int > fd.fe.message != 0:
             msg = &fd.fe.message.c
             message = msg[:fd.fe.message.len]
         d = {'time': fd.fe.time, 'type': type2label[sample_type],

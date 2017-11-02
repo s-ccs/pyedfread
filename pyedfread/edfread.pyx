@@ -3,6 +3,7 @@
 '''
 Reads SR Research EDF files and parses them into a list of dicts.
 '''
+
 cimport numpy as np
 import numpy as np
 import string
@@ -22,12 +23,14 @@ type2label = {STARTFIX: 'fixation', STARTSACC: 'saccade', STARTBLINK: 'blink',
 
 
 sample_columns = ['time', 'px_left', 'px_right', 'py_left', 'py_right',
-                  'hx_left', 'hx_right', 'hy_left', 'hy_right', 'pa_left', 'pa_right',
-                  'gx_left', 'gx_right', 'gy_left', 'gy_right', 'rx', 'ry',
-                  'gxvel_left', 'gxvel_right', 'gyvel_left', 'gyvel_right', 'hxvel_left', 'hxvel_right',
-                  'hyvel_left', 'hyvel_right', 'rxvel_left', 'rxvel_right', 'ryvel_left', 'ryvel_right',
-                  'fgxvel', 'fgyvel', 'fhxyvel', 'fhyvel',  'frxyvel', 'fryvel',
-                  'flags', 'input', 'buttons', 'htype', 'errors']
+                  'hx_left', 'hx_right', 'hy_left', 'hy_right', 'pa_left',
+                  'pa_right', 'gx_left', 'gx_right', 'gy_left', 'gy_right',
+                  'rx', 'ry', 'gxvel_left', 'gxvel_right', 'gyvel_left',
+                  'gyvel_right', 'hxvel_left', 'hxvel_right', 'hyvel_left',
+                  'hyvel_right', 'rxvel_left', 'rxvel_right', 'ryvel_left',
+                  'ryvel_right', 'fgxvel', 'fgyvel', 'fhxyvel', 'fhyvel',
+                  'frxyvel', 'fryvel', 'flags', 'input', 'buttons', 'htype',
+                  'errors']
 
 
 cdef extern from "edf.h":
@@ -60,6 +63,18 @@ def read_calibration(filename, consistency=0):
     '''
     Read calibration/validation messages from EDF file.
     '''
+    return read_messages(filename,
+                         startswith=['!VAL', '!CAL'],
+                         consistency=consistency)
+
+
+def read_messages(filename, startswith=None, consistency=0):
+    '''
+    Read messages from edf file
+
+    '''
+    if startswith is not None:
+        startswith = [s.encode('utf-8') for s in startswith]
     cdef int errval = 1
     cdef int * ef
     cdef char * msg
@@ -81,8 +96,10 @@ def read_calibration(filename, consistency=0):
             if < int > fd.fe.message != 0:
                 msg = &fd.fe.message.c
                 message = msg[:fd.fe.message.len]
-                if message.startswith(b'!CAL') or message.startswith(b'!VAL'):
+                if (startswith is None or
+                        any([message.startswith(s) for s in startswith])):
                     messages.append(message)
+
     return messages
 
 
@@ -101,7 +118,7 @@ def fread(filename,
 
 cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
     cdef int errval = 1
-    cdef char * buf = <char * > malloc(1024 * sizeof(char))
+    cdef char * buf = < char * > malloc(1024 * sizeof(char))
     cdef int * ef
     cdef int sample_type, cnt, trial
 
@@ -307,7 +324,7 @@ cdef data2dict(sample_type, int * ef):
             (sample_type == MESSAGEEVENT)):
         message = ''
         if < int > fd.fe.message != 0:
-            msg = &fd.fe.message.c
+            msg = & fd.fe.message.c
             message = msg[:fd.fe.message.len]
         d = {'time': fd.fe.time, 'type': type2label[sample_type],
              'start': fd.fe.sttime, 'end': fd.fe.entime,

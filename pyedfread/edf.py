@@ -4,10 +4,12 @@ import pandas as pd
 import h5py
 import os
 
+
 def pread(filename,
           ignore_samples=False,
           filter='all',
-          split_char=' '):
+          split_char=' ',
+          trial_marker=b'TRIALID'):
     '''
     Parse an EDF file into a pandas.DataFrame.
 
@@ -38,14 +40,14 @@ def pread(filename,
     split_char : Character used to split metadata messages.
     '''
     if not os.path.isfile(filename):
-        raise RuntimeError('File "%s" does not exist'%filename)
+        raise RuntimeError('File "%s" does not exist' % filename)
 
     if pd is None:
         raise RuntimeError('Can not import pandas.')
 
     samples, events, messages = edfread.fread(
         filename, ignore_samples,
-        filter, split_char)
+        filter, split_char, trial_marker)
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
     samples = pd.DataFrame(np.asarray(samples), columns=edfread.sample_columns)
@@ -73,20 +75,26 @@ def save_human_understandable(samples, events, messages, path):
     '''
     f = h5py.File(path, 'w')
     try:
-        for name, data in zip(['samples', 'events', 'messages'], [samples, events, messages]):
+        for name, data in zip(['samples', 'events', 'messages'],
+                              [samples, events, messages]):
             fm_group = f.create_group(name)
             for field in data.columns:
                 try:
-                    fm_group.create_dataset(field, data=data[field],
-                        compression="gzip", compression_opts=1, shuffle=True)
+                    fm_group.create_dataset(field,
+                                            data=data[field],
+                                            compression="gzip",
+                                            compression_opts=1,
+                                            shuffle=True)
                 except TypeError:
                     # Probably a string that can not be saved in hdf.
                     # Map to numbers and save mapping in attrs.
                     column = data[field].values.astype(str)
-                    mapping = dict((key, i) for i, key in enumerate(np.unique(column)))
+                    mapping = dict((key, i)
+                                   for i, key in enumerate(np.unique(column)))
                     fm_group.create_dataset(field,
-                        data=np.array([mapping[val] for val in column]))
-                    fm_group.attrs[field+'mapping'] = str(mapping)
+                                            data=np.array([mapping[val]
+                                                           for val in column]))
+                    fm_group.attrs[field + 'mapping'] = str(mapping)
 
     finally:
         f.close()

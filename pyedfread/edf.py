@@ -1,4 +1,4 @@
-from pyedfread import edfread
+from . import edfread
 import numpy as np
 import pandas as pd
 import h5py
@@ -97,4 +97,4 @@ def save_human_understandable(samples, events, messages, path):
                     fm_group.attrs[field + 'mapping'] = str(mapping)
 
     finally:
-        f.close()
+        f.close()   

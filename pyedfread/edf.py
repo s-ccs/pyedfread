@@ -25,7 +25,7 @@ def pread(filename,
     Arguments:
     ---------
 
-    ingnore_samples : If true individual samples will not be saved, but only
+    ignore_samples : If true individual samples will not be saved, but only
         event averages.
 
     filter : List of strings.

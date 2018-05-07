@@ -9,7 +9,8 @@ def pread(filename,
           ignore_samples=False,
           filter='all',
           split_char=' ',
-          trial_marker=b'TRIALID'):
+          trial_marker=b'TRIALID',
+          meta={}):
     '''
     Parse an EDF file into a pandas.DataFrame.
 
@@ -25,7 +26,7 @@ def pread(filename,
     Arguments:
     ---------
 
-    ingnore_samples : If true individual samples will not be saved, but only
+    ignore_samples : If true individual samples will not be saved, but only
         event averages.
 
     filter : List of strings.
@@ -38,6 +39,9 @@ def pread(filename,
             Message is "beep 150" and split_char = ' ' -> (beep, 150)
 
     split_char : Character used to split metadata messages.
+    
+    meta : A dictionary to insert additional metadata to dataframes based on 
+        key-value pairs.
     '''
     if not os.path.isfile(filename):
         raise RuntimeError('File "%s" does not exist' % filename)
@@ -51,6 +55,12 @@ def pread(filename,
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
     samples = pd.DataFrame(np.asarray(samples), columns=edfread.sample_columns)
+    
+    for key, value in meta.items():
+        events.insert(0,key,value)
+        messages.insert(0,key,value)
+        samples.insert(0,key,value)
+        
     return samples, events, messages
 
 

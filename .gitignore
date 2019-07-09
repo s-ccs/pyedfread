@@ -3,6 +3,7 @@
 *.c
 *.o
 *.swp
+*.pdb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

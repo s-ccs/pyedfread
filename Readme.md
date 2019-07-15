@@ -41,6 +41,11 @@ Edit edftypes.h. Replace the chunk of typedefs (lines 16-25) with the following:
 #endif
 ```
 
+One of the DLLs from SR Research (zlibwapi.dll) depends on MSVCP90.dll.
+This _should_ come with MS Visual Studio C++ 2008 SP1 redistributable, but its installer didn't seem to put the file on the PATH.
+Instead, I had already installed [Mercurial for Windows](https://www.mercurial-scm.org/release/windows/mercurial-4.9.1-x64.msi)
+which comes with the correct version of that file and puts it on the PATH by default.
+
 Follow [this sr-support forum post](https://www.sr-support.com/forum/eyelink/programming/56478-edf_data-h-use-uint8-instead-of-byte)
 for updates.
  

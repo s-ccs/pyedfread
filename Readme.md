@@ -27,9 +27,19 @@ As of this writing (July 2019), the EyeLink Developers Kit for Windows requires 
 before it will work with this project. Administrator access is required to edit the files
 in their default directory: C:\Program Files (x86)\SR Research\EyeLink\EDF_Access_API\Example
 
-Edit edf_data.h and replace all instances of the use of type `byte` with `UINT8` (lines 280 and 322-327).
-
-Edit edftypes.h and replace `typedef unsigned char  byte;` with `typedef unsigned char  UINT8;` (line 19).
+Edit edftypes.h. Replace the chunk of typedefs (lines 16-25) with the following:
+```C
+#ifndef BYTEDEF
+	#define BYTEDEF 1
+	typedef unsigned char  byte;
+	#ifndef _BASETSD_H_ /* windows header */
+		typedef short          INT16;
+		typedef int            INT32;
+		typedef unsigned short UINT16;
+		typedef unsigned int   UINT32;
+	#endif
+#endif
+```
 
 Follow [this sr-support forum post](https://www.sr-support.com/forum/eyelink/programming/56478-edf_data-h-use-uint8-instead-of-byte)
 for updates.

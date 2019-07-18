@@ -3,13 +3,11 @@ pyedfread
 
 A utility that parses SR research EDF data files into pandas DataFrames.
 
-
-
 Requirements
 ============
  - python 3.6 recommended. Not tested with 2.7 anymore, but probably works.
- - edf access api. Download from SR-Research support forum,
-   or install via apt-get on Ubuntu.
+ - EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr-support.com/forum/downloads/eyelink-display-software)
+ (forum registration required).
  - cython. Use conda/pip etc. to install
  - pandas + h5py. Required to run command line scripts. You can still parse edfs
    into numpy array and list of dicts without pandas.
@@ -23,6 +21,34 @@ Requirements
  > If you use any other linux distribution, download the API files and place
  > libedfapi.so in lib/ and \*.h files in include. Setup.py should be able to
  > work with this.
+ 
+### Windows Support
+As of this writing (July 2019), the EyeLink Developers Kit for Windows requires small modifications
+before it will work with this project. Administrator access is required to edit the files
+in their default directory: C:\Program Files (x86)\SR Research\EyeLink\EDF_Access_API\Example
+
+Edit edftypes.h. Replace the chunk of typedefs (lines 16-25) with the following:
+```C
+#ifndef BYTEDEF
+	#define BYTEDEF 1
+	typedef unsigned char  byte;
+	#ifndef _BASETSD_H_ /* windows header */
+		typedef short          INT16;
+		typedef int            INT32;
+		typedef unsigned short UINT16;
+		typedef unsigned int   UINT32;
+	#endif
+#endif
+```
+
+One of the DLLs from SR Research (zlibwapi.dll) depends on MSVCP90.dll.
+This _should_ come with MS Visual Studio C++ 2008 SP1 redistributable, but its installer didn't seem to put the file on the PATH.
+Instead, I had already installed [Mercurial for Windows](https://www.mercurial-scm.org/release/windows/mercurial-4.9.1-x64.msi)
+which comes with the correct version of that file and puts it on the PATH by default.
+
+Follow [this sr-support forum post](https://www.sr-support.com/forum/eyelink/programming/56478-edf_data-h-use-uint8-instead-of-byte)
+for updates.
+ 
 
 Setup
 =====

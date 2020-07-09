@@ -83,6 +83,7 @@ def read_messages(filename, startswith=None, consistency=0):
         raise IOError('Could not open: %s' % filename)
 
     messages = []
+    timestamps = []
     samples = []
     while True:
         sample_type = edf_get_next_data(ef)
@@ -99,8 +100,9 @@ def read_messages(filename, startswith=None, consistency=0):
                 if (startswith is None or
                         any([message.startswith(s) for s in startswith])):
                     messages.append(message)
+                    timestamps.append(fd.fe.sttime)
 
-    return messages
+    return messages, timestamps
 
 
 def fread(filename,

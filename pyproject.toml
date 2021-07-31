@@ -1,0 +1,2 @@
+[build-system]
+requires = ['pandas', 'cython', 'h5py']

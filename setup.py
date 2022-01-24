@@ -23,15 +23,15 @@ if sys.platform.startswith('darwin'):
 elif sys.platform.startswith('win32'):
     import os
     import platform
-    srr_basedir = r"C:\Program Files (x86)\SR Research\EyeLink\EDF_Access_API"
+    srr_basedir = r"C:\Program Files (x86)\SR Research\EyeLink"
     if platform.architecture()[0] == "64bit":
-        arch_dir = 'win64'
+        arch_dir = 'x64'
         lib_names = ['edfapi64']
     else:
-        arch_dir = 'win32'
+        arch_dir = ''
         lib_names = ['edfapi']
-    args = {'include_dirs': [numpy.get_include(), os.path.join(srr_basedir, 'Example')],
-            'library_dirs': [os.path.join(srr_basedir, 'lib', arch_dir)],
+    args = {'include_dirs': [numpy.get_include(), os.path.join(srr_basedir, 'Includes')],
+            'library_dirs': [os.path.join(srr_basedir, 'libs', arch_dir)],
             'libraries': lib_names
             }
 else:  # linux, unix, cygwin

@@ -54,7 +54,5 @@ ext_data = Extension(
 )
 
 setup(cmdclass={'build_ext': build_ext},
-      packages=['pyedfread'],
       ext_modules=[ext_data, ext_module],
-      scripts=['pyedfread/read_edf']
       )

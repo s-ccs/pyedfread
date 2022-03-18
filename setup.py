@@ -53,11 +53,7 @@ ext_data = Extension(
     **args
 )
 
-setup(name='pyedfread',
-      version='0.1',
-      description='Read SR-Research EDF files with python.',
-      author='Niklas Wilming',
-      cmdclass={'build_ext': build_ext},
+setup(cmdclass={'build_ext': build_ext},
       packages=['pyedfread'],
       ext_modules=[ext_data, ext_module],
       scripts=['pyedfread/read_edf']

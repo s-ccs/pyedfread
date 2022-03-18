@@ -4,6 +4,7 @@ Test pyedfread by comparing against edf2asc output.
 Only compares readout of samples at the moment.
 """
 
+from pkg_resources import resource_filename
 import unittest
 import numpy as np
 from pyedfread import edf
@@ -11,7 +12,9 @@ from pyedfread import edf
 
 class TestEdfread(unittest.TestCase):
     def setUp(self):
-        samples, events, messages = edf.pread("../SUB001.EDF")
+        self.edf_file = resource_filename('pyedfread', 'data/SUB001.EDF')
+        self.asc_file = resource_filename('pyedfread', 'data/SUB001.asc')
+        samples, events, messages = edf.pread(self.edf_file)
         self.samples = samples
         self.events = events
         self.messages = messages
@@ -20,7 +23,7 @@ class TestEdfread(unittest.TestCase):
     def test_validate_against_edf2asc(self):
         samples = self.samples.loc[:, ("time", "gx_right", "gy_right", "pa_right")]
         samples = samples.round(1).set_index("time")
-        with open("../SUB001.asc") as asc:
+        with open(self.asc_file) as asc:
             for line in asc:
                 x = (
                     line.strip()
@@ -43,7 +46,7 @@ class TestEdfread(unittest.TestCase):
                         pass
 
     def test_ignore_samples(self):
-        samples, events, messages = edf.pread("../SUB001.EDF", ignore_samples=True)
+        samples, events, messages = edf.pread(self.edf_file, ignore_samples=True)
         self.assertEqual(samples.shape[0], 0)
 
     def test_messages(self):

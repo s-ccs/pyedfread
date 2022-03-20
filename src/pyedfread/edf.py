@@ -11,7 +11,7 @@ def pread(
     filter="all",
     split_char=" ",
     trial_marker=b"TRIALID",
-    meta={},
+    meta=None,
 ):
     """
     Parse an EDF file into a pandas.DataFrame.
@@ -45,6 +45,8 @@ def pread(
     meta : A dictionary to insert additional metadata to dataframes based on
         key-value pairs.
     """
+    if meta is None:
+        meta = {}
     if not os.path.isfile(filename):
         raise RuntimeError('File "%s" does not exist' % filename)
 

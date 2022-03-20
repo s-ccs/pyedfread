@@ -140,13 +140,15 @@ def read_messages(filename, startswith=None, consistency=0):
 
 
 def fread(
-    filename, ignore_samples=False, filter=[], split_char=' ', trial_marker=b'TRIALID'
+    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker=b'TRIALID'
 ):
     """
     Read an EDF file into a list of dicts.
 
     For documentation see edf.pread().
     """
+    if filter is None:
+        filter = []
     return parse_edf(filename, ignore_samples, filter, split_char, trial_marker)
 
 

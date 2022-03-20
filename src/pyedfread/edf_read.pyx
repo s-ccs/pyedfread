@@ -294,23 +294,26 @@ def parse_edf(
     cdef int * ef
     cdef int sample_type, cnt, trial
 
-    left_acc, right_acc = [], []
-    current_messages = {}
-    current_event = {}
-    message_accumulator = []
-    event_accumulator = []
+    # open the file
     ef = edf_open_file(filename.encode('utf-8'), 0, 1, 1, & errval)
     if errval < 0:
         raise IOError(f'Could not open: {filename}')
     e = edf_get_preamble_text(ef, buf, 1024)
+
+    # initialize sample array
     num_elements = edf_get_element_count(ef)
     if ignore_samples:
         num_elements = 0
-
     cdef np.ndarray npsamples = np.ndarray((num_elements, 40), dtype=np.float64)
     cdef np.float64_t[:, :] samples = npsamples
-    trial, cnt = -1, 0
 
+    # parse samples and events
+    trial = -1
+    cnt = 0
+    current_messages = {}
+    current_event = {}
+    message_accumulator = []
+    event_accumulator = []
     while True:
         sample_type = edf_get_next_data(ef)
         if sample_type == NO_PENDING_ITEMS:

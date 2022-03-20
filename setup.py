@@ -49,7 +49,7 @@ else:  # linux, unix, cygwin
         "extra_link_args": ["-fopenmp"],
     }
 
-ext_module = Extension("pyedfread.edfread", ["src/pyedfread/edfread.pyx"], **args)
+ext_module = Extension("pyedfread.edf_read", ["src/pyedfread/edf_read.pyx"], **args)
 
 ext_data = Extension("pyedfread.edf_data", ["src/pyedfread/edf_data.pyx"], **args)
 

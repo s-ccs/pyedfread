@@ -1,4 +1,4 @@
-from pyedfread import edfread
+from pyedfread import edf_read
 import numpy as np
 import pandas as pd
 import h5py
@@ -69,12 +69,12 @@ def pread(
     if not os.path.isfile(filename):
         raise RuntimeError('File "%s" does not exist' % filename)
 
-    samples, events, messages = edfread.fread(
+    samples, events, messages = edf_read.fread(
         filename, ignore_samples, filter, split_char, trial_marker
     )
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
-    samples = pd.DataFrame(np.asarray(samples), columns=edfread.sample_columns)
+    samples = pd.DataFrame(np.asarray(samples), columns=edf_read.sample_columns)
 
     for key, value in meta.items():
         events.insert(0, key, value)

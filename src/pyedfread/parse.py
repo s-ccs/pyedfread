@@ -11,7 +11,7 @@ def read_edf(
     ignore_samples=False,
     filter="all",
     split_char=" ",
-    trial_marker=b"TRIALID",
+    trial_marker="TRIALID",
     meta=None,
 ):
     """

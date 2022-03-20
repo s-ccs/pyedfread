@@ -223,7 +223,8 @@ def parse_message(
     data, trial, current_messages, message_accumulator, split_char, filter, trial_marker
 ):
     """Parse message information based on message type."""
-    if data['message'].startswith(trial_marker):
+    message = data['message'].decode('utf-8').strip().replace('\x00', '')
+    if message.startswith(trial_marker):
         if (trial <= 0) and (len(current_messages.keys()) > 0):
             current_messages['py_trial_marker'] = trial
             message_accumulator.append(current_messages)
@@ -232,20 +233,18 @@ def parse_message(
             trial += 1
         current_messages = {'py_trial_marker': trial}
         message_accumulator.append(current_messages)
-        trialid = data['message'].decode('utf-8').strip().replace('\x00', '')
-        current_messages['trialid '] = trialid
+        current_messages['trialid '] = message
         current_messages['trialid_time'] = data['start']
 
-    elif data['message'].startswith(b'SYNCTIME'):
+    elif message.startswith('SYNCTIME'):
         current_messages['SYNCTIME'] = data['start']
         current_messages['SYNCTIME_start'] = data['start']
 
-    elif data['message'].startswith(b'DRIFTCORRECT'):
-        current_messages['DRIFTCORRECT'] = data[
-            'message'].decode('utf-8').strip().replace('\x00', '')
+    elif message.startswith('DRIFTCORRECT'):
+        current_messages['DRIFTCORRECT'] = message
 
-    elif data['message'].startswith(b'METATR'):
-        parts = data['message'].decode('utf-8').strip().replace('\x00', '').split(' ')
+    elif message.startswith('METATR'):
+        parts = message.split(' ')
         msg, key = parts[0], parts[1]
         if len(parts) == 3:
             value = parts[2]
@@ -259,10 +258,7 @@ def parse_message(
     else:
         # These are messageevents that accumulate during a fixation.
         # I treat them as key value pairs
-        msg = data['message'].decode('utf-8').strip().replace('\x00', '').split(
-            split_char
-        )
-
+        msg = message.split(split_char)
         if filter == 'all' or msg[0] in filter:
             try:
                 value = [float(v) for v in msg[1:]]
@@ -292,7 +288,7 @@ def parse_message(
 
 
 def parse_edf(
-    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker=b'TRIALID'
+    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker='TRIALID'
 ):
     """Read samples, events, and messages from an EDF file."""
     if filter is None:

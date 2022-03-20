@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
-Reads SR Research EDF files and parses them into ocupy datamats.
-'''
+"""Read SR Research EDF files and parse them into ocupy datamats."""
 
 
 MISSING_DATA = -32768     # data is missing (integer)

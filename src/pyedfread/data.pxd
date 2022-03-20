@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
-Define SR Research structures used in the EDF.
-''' 
+"""Define SR Research structures used in the EDF."""
 
 from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 

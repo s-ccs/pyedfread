@@ -215,72 +215,19 @@ def parse_datum(
     return current_event
 
 
-def parse_message(
-    data, trial, current_messages, message_accumulator, split_char, filter, trial_marker
-):
+def parse_message(data, trial, message_accumulator, filter, trial_marker):
     """Parse message information based on message type."""
     message = data['message'].decode('utf-8').replace('\x00', '').strip()
     if message.startswith(trial_marker):
-        if (trial <= 0) and (len(current_messages.keys()) > 0):
-            current_messages['py_trial_marker'] = trial
-            message_accumulator.append(current_messages)
+        if trial <= 0:
             trial = 1
         else:
             trial += 1
-        current_messages = {'py_trial_marker': trial}
-        message_accumulator.append(current_messages)
-        current_messages['trialid '] = message
-        current_messages['trialid_time'] = data['start']
 
-    elif message.startswith('SYNCTIME'):
-        current_messages['SYNCTIME'] = data['start']
-        current_messages['SYNCTIME_start'] = data['start']
-
-    elif message.startswith('DRIFTCORRECT'):
-        current_messages['DRIFTCORRECT'] = message
-
-    elif message.startswith('METATR'):
-        parts = message.split(' ')
-        msg, key = parts[0], parts[1]
-        if len(parts) == 3:
-            value = parts[2]
-        else:
-            value = str(parts[2:])
-        current_messages[key + '_time'] = data['start']
-        try:
-            current_messages[key] = float(value)
-        except (TypeError, ValueError):
-            current_messages[key] = value
-    else:
-        # These are messageevents that accumulate during a fixation.
-        # I treat them as key value pairs
-        msg = message.split(split_char)
-        if filter == 'all' or msg[0] in filter:
-            try:
-                value = [float(v) for v in msg[1:]]
-            except ValueError:
-                value = msg[1:]
-
-            if len(msg) == 1:
-                key, value = msg[0], np.nan
-            elif len(msg) == 2:
-                key, value = msg[0], value[0]
-            elif len(msg) > 2:
-                key, value = msg[0], value
-
-            if key not in current_messages.keys():
-                current_messages[key] = value
-                current_messages[key + '_time'] = data['start']
-            else:
-                try:
-                    current_messages[key].extend(value)
-                    current_messages[key + '_time'].extend(data['start'])
-                except (AttributeError, TypeError) as e:
-                    current_messages[key] = [current_messages[key], value]
-                    current_messages[
-                        key + '_time'] = [current_messages[key + '_time'],
-                                          data['start']]
-    return trial, current_messages
+    if filter == 'all' or any([message.startwith(s) for s in filter]):
+        info = {'time': data['start'], 'trial': trial, 'message': message}
+        message_accumulator.append(info)
+    return trial
 
 
 def parse_edf(
@@ -372,14 +319,8 @@ def parse_edf(
 
         elif sample_type == MESSAGEEVENT:
             data = data2dict(sample_type, ef)
-            trial, current_messages = parse_message(
-                data,
-                trial,
-                current_messages,
-                message_accumulator,
-                split_char,
-                filter,
-                trial_marker,
+            trial = parse_message(
+                data, trial, message_accumulator, filter, trial_marker
             )
 
         else:

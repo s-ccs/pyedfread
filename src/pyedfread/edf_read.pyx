@@ -102,8 +102,6 @@ def read_preamble(filename, consistency=0):
 
 def read_messages(filename, startswith=None, consistency=0):
     """Read messages from an edf file."""
-    if startswith is not None:
-        startswith = [s.encode('utf-8') for s in startswith]
     cdef int errval = 1
     cdef int * ef
     cdef char * msg
@@ -125,6 +123,7 @@ def read_messages(filename, startswith=None, consistency=0):
             if < int > fd.fe.message != 0:
                 msg = &fd.fe.message.c
                 message = msg[:fd.fe.message.len]
+                message = message.decode('utf-8').replace('\x00', '').strip()
                 if (
                     startswith is None
                     or any([message.startswith(s) for s in startswith])

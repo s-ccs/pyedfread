@@ -24,13 +24,19 @@ def test_messages(edf_data):
     # have one extra sample compared to original and one extra message with
     # display coordinates
     messages = edf_data["messages"]
-    np.testing.assert_array_equal(
-        messages["sample"].to_numpy()[1:], np.arange(6, 301, 5)
-    )
-    # original assumed shape of (58, 5)
-    assert messages.shape == (60, 31)
-    # original looked for this sample at index 57
-    assert messages.loc[58, 'trialid_time'] == 502911
+    expected = [
+        'DISPLAY_COORDS 0 0 1919 1079',
+        '',
+        'RECCFG CR 1000 2 1 R',
+        'ELCLCFG MTABLER',
+        'GAZE_COORDS 0.00 0.00 1919.00 1079.00',
+        'THRESHOLDS R 85 220',
+        'ELCL_WINDOW_SIZES 176 188 0 0',
+        'ELCL_PROC CENTROID (3)',
+        'ELCL_PCR_PARAM 5 3.0',
+        '!MODE RECORD CR 1000 2 1 R'
+    ]
+    assert messages.loc[0:9, 'message'].to_list() == expected
 
 
 def test_events(edf_data):

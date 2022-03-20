@@ -97,7 +97,7 @@ def read_preamble(filename, consistency=0):
     cdef char * buf = <char * > malloc(psize * sizeof(char))
     e = edf_get_preamble_text(ef, buf, psize)
     edf_close_file(ef)
-    return buf
+    return buf.decode('utf-8')
 
 
 def read_messages(filename, startswith=None, consistency=0):

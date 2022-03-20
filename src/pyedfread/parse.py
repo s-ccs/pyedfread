@@ -69,7 +69,7 @@ def read_edf(
     if not os.path.isfile(filename):
         raise RuntimeError('File "%s" does not exist' % filename)
 
-    samples, events, messages = edf_read.fread(
+    samples, events, messages = edf_read.parse_edf(
         filename, ignore_samples, filter, split_char, trial_marker
     )
     events = pd.DataFrame(events)

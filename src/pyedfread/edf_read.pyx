@@ -289,8 +289,12 @@ def parse_message(
     return trial, current_messages, message_accumulator
 
 
-cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
+def parse_edf(
+    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker=b'TRIALID'
+):
     """Read samples, events, and messages from an EDF file."""
+    if filter is None:
+        filter = []
     cdef int errval = 1
     cdef char * buf = < char * > malloc(1024 * sizeof(char))
     cdef int * ef
@@ -395,16 +399,3 @@ cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
             )
     free(buf)
     return samples, event_accumulator, message_accumulator
-
-
-def fread(
-    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker=b'TRIALID'
-):
-    """
-    Read an EDF file into a list of dicts.
-
-    For documentation see edf.pread().
-    """
-    if filter is None:
-        filter = []
-    return parse_edf(filename, ignore_samples, filter, split_char, trial_marker)

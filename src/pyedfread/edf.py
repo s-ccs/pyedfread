@@ -68,9 +68,6 @@ def pread(
     if not os.path.isfile(filename):
         raise RuntimeError('File "%s" does not exist' % filename)
 
-    if pd is None:
-        raise RuntimeError("Can not import pandas.")
-
     samples, events, messages = edfread.fread(
         filename, ignore_samples, filter, split_char, trial_marker
     )

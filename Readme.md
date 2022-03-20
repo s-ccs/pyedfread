@@ -5,12 +5,9 @@ A utility that parses SR research EDF data files into pandas DataFrames.
 
 Requirements
 ============
- - python 3.6 recommended. Not tested with 2.7 anymore, but probably works.
- - EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr-support.com/forum/downloads/eyelink-display-software)
+
+EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr-support.com/forum/downloads/eyelink-display-software)
  (forum registration required).
- - cython. Use conda/pip etc. to install
- - pandas + h5py. Required to run command line scripts. You can still parse edfs
-   into numpy array and list of dicts without pandas.
 
  > I do not include the SR Research EDF Access API header files and libraries.
  > These are needed to compile pyedfread with cython. If you use a mac you can
@@ -52,9 +49,9 @@ for updates.
 
 Setup
 =====
-Run  'python setup.py install' to compile and install. This will install the
-python library and a command line script to parse edfs.
 
+Run  `pip install git+https://github.com/mortonne/pyedfread` to compile and install. This will install the
+python library and a command line script to parse edfs.
 
 Usage
 =====
@@ -67,10 +64,10 @@ From python
 
 After compilation run the following lines for a quick test.
 
-    >>> from pyedfread import edf
-    >>> samples, events, messages = edf.pread('SUB001.EDF')
+    >>> import pyedfread as edf
+    >>> samples, events, messages = edf.read_edf('SUB001.EDF')
 
-This opens SUB001.EDF and parses it three two DataFrames:
+This opens SUB001.EDF and parses it three DataFrames:
 
  - samples contain individual samples.
  - events contains fixation and saccade definitions
@@ -90,12 +87,9 @@ field condition with value 1 for each trial to the messages structure. Of course
 if the value varies across trials this will be reflected in the messages
 structure. This is what it looks like in python code:
 
-	>>> samples, events, messages = edf.pread('SUB001.EDF', ignore_samples=True, filter=['condition'])
+	>>> samples, events, messages = edf.read_edf('SUB001.EDF', ignore_samples=True, filter=['condition'])
 
 If filter='all', pyedfread saves all messages it can parse.
-
-In earlier versions of pyedfread one could also specify which sample properties
-to pull out from the data stream. This has been deprecated.
 
 The column names map almost directly to C structure names in the EDF C API. To
 understand column content check the edf acces api documentation (2.1.1 FSAMPLE

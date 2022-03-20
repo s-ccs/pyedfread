@@ -280,7 +280,7 @@ def parse_message(
                     current_messages[
                         key + '_time'] = [current_messages[key + '_time'],
                                           data['start']]
-    return trial, current_messages, message_accumulator
+    return trial, current_messages
 
 
 def parse_edf(
@@ -372,7 +372,7 @@ def parse_edf(
 
         elif sample_type == MESSAGEEVENT:
             data = data2dict(sample_type, ef)
-            trial, current_messages, message_accumulator = parse_message(
+            trial, current_messages = parse_message(
                 data,
                 trial,
                 current_messages,

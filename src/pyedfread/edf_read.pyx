@@ -309,7 +309,7 @@ def parse_edf(
     if ignore_samples:
         num_elements = 0
 
-    cdef np.ndarray npsamples = np.ndarray((num_elements,  40), dtype=np.float64)
+    cdef np.ndarray npsamples = np.ndarray((num_elements, 40), dtype=np.float64)
     cdef np.float64_t[:, :] samples = npsamples
     trial, cnt = -1, 0
 

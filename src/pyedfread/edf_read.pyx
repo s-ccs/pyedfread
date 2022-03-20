@@ -125,8 +125,10 @@ def read_messages(filename, startswith=None, consistency=0):
             if < int > fd.fe.message != 0:
                 msg = &fd.fe.message.c
                 message = msg[:fd.fe.message.len]
-                if (startswith is None or
-                        any([message.startswith(s) for s in startswith])):
+                if (
+                    startswith is None
+                    or any([message.startswith(s) for s in startswith])
+                ):
                     messages.append(message)
     return messages
 

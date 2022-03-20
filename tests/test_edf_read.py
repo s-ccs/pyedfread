@@ -47,9 +47,13 @@ def test_validate_against_edf2asc(edf_data):
     samples = samples.loc[:, ("time", "gx_right", "gy_right", "pa_right")]
     samples = samples.round(1).set_index("time")
 
+    # check the first n samples
+    n = 100
     asc_file = resource_filename("pyedfread", "data/SUB001.asc")
     with open(asc_file) as asc:
-        for line in asc:
+        for i, line in enumerate(asc):
+            if i == n:
+                break
             x = (
                 line.strip()
                 .replace("...", "")

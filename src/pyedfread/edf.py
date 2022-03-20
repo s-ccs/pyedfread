@@ -126,7 +126,7 @@ def save_human_understandable(samples, events, messages, path):
         f.close()
 
 
-def read_edf():
+def convert_edf():
     """Read an EDF file and write to an HDF file."""
     parser = argparse.ArgumentParser()
     parser.add_argument("edffile", help="The EDF file you would like to parse")

@@ -153,7 +153,7 @@ def convert_edf():
         help="If True events and messages will be joined into one big structure based on the trial number.",
     )
     args = parser.parse_args()
-    samples, events, messages = pread(args.edffile, ignore_samples=args.ignore_samples)
+    samples, events, messages = read_edf(args.edffile, ignore_samples=args.ignore_samples)
 
     if args.join:
         events = trials2events(events, messages)

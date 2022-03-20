@@ -10,7 +10,6 @@ def read_edf(
     filename,
     ignore_samples=False,
     filter=None,
-    split_char=" ",
     trial_marker="TRIALID",
     meta=None,
 ):
@@ -34,20 +33,12 @@ def read_edf(
         If true individual samples will not be saved, but only event
         averages.
 
-    filter : list of str
-        The SR system allows to send trial meta data messages into
-        the data stream. This function decides which messages to keep
-        by checking if the message string is in this filter list.
-        Messages are split by 'split_char' and the first part of the
-        message is checked against the filter list. Example:
-            Message is "beep_150" and split_char = '_' -> (beep, 150)
-            Message is "beep 150" and split_char = ' ' -> (beep, 150)
+    filter : list of str, optional
+        Messages are kept only if they start with one of these strings.
 
-    split_char : str
-        Character used to split metadata messages.
-
-    trial_marker : bytearray
-        Byte string at the start of messages to include.
+    trial_marker : str, optional
+        Messages that start with this string will be assumed to
+        indicate the start of a trial.
 
     meta : dict
         A dictionary to insert additional metadata to dataframes based
@@ -70,7 +61,7 @@ def read_edf(
         raise RuntimeError('File "%s" does not exist' % filename)
 
     samples, events, messages = edf_read.parse_edf(
-        filename, ignore_samples, filter, split_char, trial_marker
+        filename, ignore_samples, filter, trial_marker
     )
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)

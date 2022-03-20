@@ -16,34 +16,52 @@ def pread(
     """
     Parse an EDF file into a pandas.DataFrame.
 
-    EDF files contain three types of data: samples, events and messages. Samples
-    are what is recorded by the eye-tracker at each point in time. This contains
-    for example instantaneous gaze position and pupil size. Events abstract from
-    samples by defining fixations, saccades and blinks. Messages contain meta
-    information about the recording such as user defined information and
+    EDF files contain three types of data: samples, events and
+    messages. Samples are what is recorded by the eye-tracker at each
+    point in time. This contains for example instantaneous gaze
+    position and pupil size. Events abstract from samples by defining
+    fixations, saccades and blinks. Messages contain meta information
+    about the recording such as user defined information and
     calibration information etc.
 
-    pread returns one pandas DataFrame for each type of information.
+    Parameters
+    ----------
+    filename : str
+        Path to EDF file.
 
-    Arguments:
-    ---------
+    ignore_samples : bool
+        If true individual samples will not be saved, but only event
+        averages.
 
-    ignore_samples : If true individual samples will not be saved, but only
-        event averages.
-
-    filter : List of strings.
-        The SR system allows to send trial meta data messages into the data
-        stream. This function decides which messages to keep by checking if the
-        message string is in this filter list. Messages are split by
-        'split_char' and the first part of the message is checked against the
-        filter list. Example:
+    filter : list of str
+        The SR system allows to send trial meta data messages into
+        the data stream. This function decides which messages to keep
+        by checking if the message string is in this filter list.
+        Messages are split by 'split_char' and the first part of the
+        message is checked against the filter list. Example:
             Message is "beep_150" and split_char = '_' -> (beep, 150)
             Message is "beep 150" and split_char = ' ' -> (beep, 150)
 
-    split_char : Character used to split metadata messages.
+    split_char : str
+        Character used to split metadata messages.
 
-    meta : A dictionary to insert additional metadata to dataframes based on
-        key-value pairs.
+    trial_marker : bytearray
+        Byte string at the start of messages to include.
+
+    meta : dict
+        A dictionary to insert additional metadata to dataframes based
+        on key-value pairs.
+
+    Returns
+    -------
+    samples : pandas.DataFrame
+        Sample information, including time, x, y, and pupil size.
+
+    events : pandas.DataFrame
+        Event information, including saccades and fixations.
+
+    messages : pandas.DataFrame
+        Message information.
     """
     if meta is None:
         meta = {}
@@ -69,25 +87,19 @@ def pread(
 
 
 def remove_time_fields(events):
-    """
-    Convenience function that drops the message send time fields.
-    """
+    """Drop the message send time fields."""
     return events.drop(
         [key for key in events.columns if "message_send_time" in key], axis=1
     )
 
 
 def trials2events(events, messages):
-    """
-    Matches trial meta information to individual events (e.g. fixations/saccades).
-    """
+    """Match trial meta information to individual events."""
     return events.merge(messages, how="left", on=["trial"])
 
 
 def save_human_understandable(samples, events, messages, path):
-    """
-    Save HDF with explicit mapping of string to numbers.
-    """
+    """Save HDF with explicit mapping of string to numbers."""
     f = h5py.File(path, "w")
     try:
         for name, data in zip(

@@ -54,5 +54,6 @@ ext_module = Extension("pyedfread.edfread", ["src/pyedfread/edfread.pyx"], **arg
 ext_data = Extension("pyedfread.edf_data", ["src/pyedfread/edf_data.pyx"], **args)
 
 setup(
+    cmdclass={'build_ext': build_ext},
     ext_modules=[ext_data, ext_module],
 )

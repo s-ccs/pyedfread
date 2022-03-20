@@ -79,7 +79,6 @@ def pread(
         events.insert(0, key, value)
         messages.insert(0, key, value)
         samples.insert(0, key, value)
-
     return samples, events, messages
 
 
@@ -121,6 +120,5 @@ def save_human_understandable(samples, events, messages, path):
                         field, data=np.array([mapping[val] for val in column])
                     )
                     fm_group.attrs[field + "mapping"] = str(mapping)
-
     finally:
         f.close()

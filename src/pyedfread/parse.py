@@ -62,14 +62,6 @@ def read_edf(
     return samples, events, messages
 
 
-def remove_time_fields(events):
-    """Drop the message send time fields."""
-    trimmed = events.drop(
-        [key for key in events.columns if "message_send_time" in key], axis=1
-    )
-    return trimmed
-
-
 def trials2events(events, messages):
     """Match trial meta information to individual events."""
     return events.merge(messages, how="left", on=["trial"])

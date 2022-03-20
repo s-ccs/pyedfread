@@ -11,7 +11,6 @@ def read_edf(
     ignore_samples=False,
     filter=None,
     trial_marker="TRIALID",
-    meta=None,
 ):
     """
     Parse an EDF file into a pandas.DataFrame.
@@ -40,10 +39,6 @@ def read_edf(
         Messages that start with this string will be assumed to
         indicate the start of a trial.
 
-    meta : dict
-        A dictionary to insert additional metadata to dataframes based
-        on key-value pairs.
-
     Returns
     -------
     samples : pandas.DataFrame
@@ -55,8 +50,6 @@ def read_edf(
     messages : pandas.DataFrame
         Message information.
     """
-    if meta is None:
-        meta = {}
     if not os.path.isfile(filename):
         raise RuntimeError('File "%s" does not exist' % filename)
 
@@ -66,11 +59,6 @@ def read_edf(
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
     samples = pd.DataFrame(np.asarray(samples), columns=edf_read.sample_columns)
-
-    for key, value in meta.items():
-        events.insert(0, key, value)
-        messages.insert(0, key, value)
-        samples.insert(0, key, value)
     return samples, events, messages
 
 

@@ -84,9 +84,10 @@ def pread(
 
 def remove_time_fields(events):
     """Drop the message send time fields."""
-    return events.drop(
+    trimmed = events.drop(
         [key for key in events.columns if "message_send_time" in key], axis=1
     )
+    return trimmed
 
 
 def trials2events(events, messages):

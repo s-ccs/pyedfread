@@ -194,15 +194,12 @@ def parse_datum(
     data,
     sample_type,
     trial,
-    split_char,
-    filter,
-    ignore_samples,
     current_event,
     event_accumulator,
 ):
     """Parse a datum into data structures."""
     if data is None:
-        return current_event, event_accumulator
+        return current_event
 
     if (sample_type == STARTFIX) or (sample_type == STARTSACC):
         current_event = data
@@ -212,9 +209,10 @@ def parse_datum(
     if (sample_type == ENDFIX) or (sample_type == ENDSACC):
         current_event.update(data)
         event_accumulator.append(current_event)
+
     if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
         current_event['blink'] = True
-    return current_event, event_accumulator
+    return current_event
 
 
 def parse_message(
@@ -383,15 +381,8 @@ def parse_edf(
 
         else:
             data = data2dict(sample_type, ef)
-            current_event, event_accumulator = parse_datum(
-                data,
-                sample_type,
-                trial,
-                split_char,
-                filter,
-                ignore_samples,
-                current_event,
-                event_accumulator,
+            current_event = parse_datum(
+                data, sample_type, trial, current_event, event_accumulator
             )
     free(buf)
     return samples, event_accumulator, message_accumulator

@@ -14,7 +14,7 @@ from pyedfread import edf
 def edf_data():
     """Sample of read-in EDF data."""
     edf_file = resource_filename("pyedfread", "data/SUB001.EDF")
-    samples, events, messages = edf.pread(edf_file)
+    samples, events, messages = edf.read_edf(edf_file)
     data = {"samples": samples, "events": events, "messages": messages}
     return data
 
@@ -74,5 +74,5 @@ def test_validate_against_edf2asc(edf_data):
 def test_ignore_samples():
     """Test option to ignore samples in EDF file."""
     edf_file = resource_filename('pyedfread', 'data/SUB001.EDF')
-    samples, events, messages = edf.pread(edf_file, ignore_samples=True)
+    samples, events, messages = edf.read_edf(edf_file, ignore_samples=True)
     assert samples.shape[0] == 0

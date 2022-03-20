@@ -6,7 +6,7 @@ import os
 import argparse
 
 
-def pread(
+def read_edf(
     filename,
     ignore_samples=False,
     filter="all",

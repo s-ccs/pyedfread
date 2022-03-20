@@ -139,17 +139,153 @@ def read_messages(filename, startswith=None, consistency=0):
     return messages
 
 
-def fread(
-    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker=b'TRIALID'
-):
-    """
-    Read an EDF file into a list of dicts.
+cdef data2dict(sample_type, int * ef):
+    """Convert EDF event to a dictionary."""
+    fd = edf_get_float_data(ef)
+    cdef char * msg
+    d = None
+    if (
+        (sample_type == STARTFIX)
+        or (sample_type == STARTSACC)
+        or (sample_type == STARTBLINK)
+        or (sample_type == ENDFIX)
+        or (sample_type == ENDSACC)
+        or (sample_type == ENDBLINK)
+        or (sample_type == MESSAGEEVENT)
+    ):
+        message = ''
+        if < int > fd.fe.message != 0:
+            msg = & fd.fe.message.c
+            message = msg[:fd.fe.message.len]
+        d = {
+            'time': fd.fe.time,
+            'type': type2label[sample_type],
+            'start': fd.fe.sttime,
+            'end': fd.fe.entime,
+            'hstx': fd.fe.hstx,
+            'hsty': fd.fe.hsty,
+            'gstx': fd.fe.gstx,
+            'gsty': fd.fe.gsty,
+            'sta': fd.fe.sta,
+            'henx': fd.fe.henx,
+            'heny': fd.fe.heny,
+            'genx': fd.fe.genx,
+            'geny': fd.fe.geny,
+            'ena': fd.fe.ena,
+            'havx': fd.fe.havx,
+            'havy': fd.fe.havy,
+            'gavx': fd.fe.gavx,
+            'gavy': fd.fe.gavy,
+            'ava': fd.fe.ava,
+            'avel': fd.fe.avel,
+            'pvel': fd.fe.pvel,
+            'svel': fd.fe.svel,
+            'evel': fd.fe.evel,
+            'supd_x': fd.fe.supd_x,
+            'eupd_x': fd.fe.eupd_x,
+            'eye': fd.fe.eye,
+            'buttons': fd.fe.buttons,
+            'message': message,
+        }
+    return d
 
-    For documentation see edf.pread().
-    """
-    if filter is None:
-        filter = []
-    return parse_edf(filename, ignore_samples, filter, split_char, trial_marker)
+
+def parse_datum(
+    data,
+    sample_type,
+    trial,
+    split_char,
+    filter,
+    ignore_samples,
+    current_event,
+    event_accumulator,
+):
+    """Parse a datum into data structures."""
+    if data is None:
+        return current_event, event_accumulator
+
+    if (sample_type == STARTFIX) or (sample_type == STARTSACC):
+        current_event = data
+        current_event['blink'] = False
+        current_event['trial'] = trial
+
+    if (sample_type == ENDFIX) or (sample_type == ENDSACC):
+        current_event.update(data)
+        event_accumulator.append(current_event)
+    if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
+        current_event['blink'] = True
+    return current_event, event_accumulator
+
+
+def parse_message(
+    data, trial, current_messages, message_accumulator, split_char, filter, trial_marker
+):
+    if data['message'].startswith(trial_marker):
+        if (trial <= 0) and (len(current_messages.keys()) > 0):
+            current_messages['py_trial_marker'] = trial
+            message_accumulator.append(current_messages)
+            trial = 1
+        else:
+            trial += 1
+        current_messages = {'py_trial_marker': trial}
+        message_accumulator.append(current_messages)
+        trialid = data['message'].decode('utf-8').strip().replace('\x00', '')
+        current_messages['trialid '] = trialid
+        current_messages['trialid_time'] = data['start']
+
+    elif data['message'].startswith(b'SYNCTIME'):
+        current_messages['SYNCTIME'] = data['start']
+        current_messages['SYNCTIME_start'] = data['start']
+
+    elif data['message'].startswith(b'DRIFTCORRECT'):
+        current_messages['DRIFTCORRECT'] = data[
+            'message'].decode('utf-8').strip().replace('\x00', '')
+
+    elif data['message'].startswith(b'METATR'):
+        parts = data['message'].decode('utf-8').strip().replace('\x00', '').split(' ')
+        msg, key = parts[0], parts[1]
+        if len(parts) == 3:
+            value = parts[2]
+        else:
+            value = str(parts[2:])
+        current_messages[key + '_time'] = data['start']
+        try:
+            current_messages[key] = float(value)
+        except (TypeError, ValueError):
+            current_messages[key] = value
+    else:
+        # These are messageevents that accumulate during a fixation.
+        # I treat them as key value pairs
+        msg = data['message'].decode('utf-8').strip().replace('\x00', '').split(
+            split_char
+        )
+
+        if filter == 'all' or msg[0] in filter:
+            try:
+                value = [float(v) for v in msg[1:]]
+            except ValueError:
+                value = msg[1:]
+
+            if len(msg) == 1:
+                key, value = msg[0], np.nan
+            elif len(msg) == 2:
+                key, value = msg[0], value[0]
+            elif len(msg) > 2:
+                key, value = msg[0], value
+
+            if key not in current_messages.keys():
+                current_messages[key] = value
+                current_messages[key + '_time'] = data['start']
+            else:
+                try:
+                    current_messages[key].extend(value)
+                    current_messages[key + '_time'].extend(data['start'])
+                except (AttributeError, TypeError) as e:
+                    current_messages[key] = [current_messages[key], value]
+                    current_messages[
+                        key + '_time'] = [current_messages[key + '_time'],
+                                          data['start']]
+    return trial, current_messages, message_accumulator
 
 
 cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
@@ -260,150 +396,14 @@ cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
     return samples, event_accumulator, message_accumulator
 
 
-def parse_datum(
-    data,
-    sample_type,
-    trial,
-    split_char,
-    filter,
-    ignore_samples,
-    current_event,
-    event_accumulator,
+def fread(
+    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker=b'TRIALID'
 ):
-    """Parse a datum into data structures."""
-    if data is None:
-        return current_event, event_accumulator
+    """
+    Read an EDF file into a list of dicts.
 
-    if (sample_type == STARTFIX) or (sample_type == STARTSACC):
-        current_event = data
-        current_event['blink'] = False
-        current_event['trial'] = trial
-
-    if (sample_type == ENDFIX) or (sample_type == ENDSACC):
-        current_event.update(data)
-        event_accumulator.append(current_event)
-    if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
-        current_event['blink'] = True
-    return current_event, event_accumulator
-
-
-def parse_message(
-    data, trial, current_messages, message_accumulator, split_char, filter, trial_marker
-):
-    if data['message'].startswith(trial_marker):
-        if (trial <= 0) and (len(current_messages.keys()) > 0):
-            current_messages['py_trial_marker'] = trial
-            message_accumulator.append(current_messages)
-            trial = 1
-        else:
-            trial += 1
-        current_messages = {'py_trial_marker': trial}
-        message_accumulator.append(current_messages)
-        trialid = data['message'].decode('utf-8').strip().replace('\x00', '')
-        current_messages['trialid '] = trialid
-        current_messages['trialid_time'] = data['start']
-
-    elif data['message'].startswith(b'SYNCTIME'):
-        current_messages['SYNCTIME'] = data['start']
-        current_messages['SYNCTIME_start'] = data['start']
-
-    elif data['message'].startswith(b'DRIFTCORRECT'):
-        current_messages['DRIFTCORRECT'] = data[
-            'message'].decode('utf-8').strip().replace('\x00', '')
-
-    elif data['message'].startswith(b'METATR'):
-        parts = data['message'].decode('utf-8').strip().replace('\x00', '').split(' ')
-        msg, key = parts[0], parts[1]
-        if len(parts) == 3:
-            value = parts[2]
-        else:
-            value = str(parts[2:])
-        current_messages[key + '_time'] = data['start']
-        try:
-            current_messages[key] = float(value)
-        except (TypeError, ValueError):
-            current_messages[key] = value
-    else:
-        # These are messageevents that accumulate during a fixation.
-        # I treat them as key value pairs
-        msg = data['message'].decode('utf-8').strip().replace('\x00', '').split(
-            split_char
-        )
-
-        if filter == 'all' or msg[0] in filter:
-            try:
-                value = [float(v) for v in msg[1:]]
-            except ValueError:
-                value = msg[1:]
-
-            if len(msg) == 1:
-                key, value = msg[0], np.nan
-            elif len(msg) == 2:
-                key, value = msg[0], value[0]
-            elif len(msg) > 2:
-                key, value = msg[0], value
-
-            if key not in current_messages.keys():
-                current_messages[key] = value
-                current_messages[key + '_time'] = data['start']
-            else:
-                try:
-                    current_messages[key].extend(value)
-                    current_messages[key + '_time'].extend(data['start'])
-                except (AttributeError, TypeError) as e:
-                    current_messages[key] = [current_messages[key], value]
-                    current_messages[
-                        key + '_time'] = [current_messages[key + '_time'],
-                                          data['start']]
-    return trial, current_messages, message_accumulator
-
-
-cdef data2dict(sample_type, int * ef):
-    """Convert EDF event to a dictionary."""
-    fd = edf_get_float_data(ef)
-    cdef char * msg
-    d = None
-    if (
-        (sample_type == STARTFIX)
-        or (sample_type == STARTSACC)
-        or (sample_type == STARTBLINK)
-        or (sample_type == ENDFIX)
-        or (sample_type == ENDSACC)
-        or (sample_type == ENDBLINK)
-        or (sample_type == MESSAGEEVENT)
-    ):
-        message = ''
-        if < int > fd.fe.message != 0:
-            msg = & fd.fe.message.c
-            message = msg[:fd.fe.message.len]
-        d = {
-            'time': fd.fe.time,
-            'type': type2label[sample_type],
-            'start': fd.fe.sttime,
-            'end': fd.fe.entime,
-            'hstx': fd.fe.hstx,
-            'hsty': fd.fe.hsty,
-            'gstx': fd.fe.gstx,
-            'gsty': fd.fe.gsty,
-            'sta': fd.fe.sta,
-            'henx': fd.fe.henx,
-            'heny': fd.fe.heny,
-            'genx': fd.fe.genx,
-            'geny': fd.fe.geny,
-            'ena': fd.fe.ena,
-            'havx': fd.fe.havx,
-            'havy': fd.fe.havy,
-            'gavx': fd.fe.gavx,
-            'gavy': fd.fe.gavy,
-            'ava': fd.fe.ava,
-            'avel': fd.fe.avel,
-            'pvel': fd.fe.pvel,
-            'svel': fd.fe.svel,
-            'evel': fd.fe.evel,
-            'supd_x': fd.fe.supd_x,
-            'eupd_x': fd.fe.eupd_x,
-            'eye': fd.fe.eye,
-            'buttons': fd.fe.buttons,
-            'message': message,
-        }
-    return d
+    For documentation see edf.pread().
+    """
+    if filter is None:
+        filter = []
+    return parse_edf(filename, ignore_samples, filter, split_char, trial_marker)

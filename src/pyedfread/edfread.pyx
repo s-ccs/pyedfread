@@ -220,6 +220,7 @@ def parse_datum(
 def parse_message(
     data, trial, current_messages, message_accumulator, split_char, filter, trial_marker
 ):
+    """Parse message information based on message type."""
     if data['message'].startswith(trial_marker):
         if (trial <= 0) and (len(current_messages.keys()) > 0):
             current_messages['py_trial_marker'] = trial

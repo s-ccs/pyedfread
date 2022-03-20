@@ -224,14 +224,14 @@ def parse_message(data, trial, message_accumulator, filter, trial_marker):
         else:
             trial += 1
 
-    if filter == 'all' or any([message.startwith(s) for s in filter]):
+    if filter is None or any([message.startwith(s) for s in filter]):
         info = {'time': data['start'], 'trial': trial, 'message': message}
         message_accumulator.append(info)
     return trial
 
 
 def parse_edf(
-    filename, ignore_samples=False, filter=None, split_char=' ', trial_marker='TRIALID'
+    filename, ignore_samples=False, filter=None, trial_marker='TRIALID'
 ):
     """Read samples, events, and messages from an EDF file."""
     if filter is None:

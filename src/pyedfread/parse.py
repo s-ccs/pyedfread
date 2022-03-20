@@ -9,7 +9,7 @@ import argparse
 def read_edf(
     filename,
     ignore_samples=False,
-    filter="all",
+    filter=None,
     split_char=" ",
     trial_marker="TRIALID",
     meta=None,

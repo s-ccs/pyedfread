@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import h5py
 import os
+import argparse
 
 
 def pread(
@@ -123,3 +124,53 @@ def save_human_understandable(samples, events, messages, path):
                     fm_group.attrs[field + "mapping"] = str(mapping)
     finally:
         f.close()
+
+
+def read_edf():
+    """Read an EDF file and write to an HDF file."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("edffile", help="The EDF file you would like to parse")
+    parser.add_argument("outputfile", help="Where to save the output")
+    parser.add_argument(
+        "-p",
+        "--pandas_hdf",
+        action="store_true",
+        default=False,
+        help="Use pandas to store HDF. Default simplifies HDF strucutre significantly (e.g. map strings to numbers and skip objects)",
+    )
+    parser.add_argument(
+        "-i",
+        "--ignore-samples",
+        action="store_true",
+        default=False,
+        help="Should the individual samples be stored in the output? Default is to read samples, ie. ignore-samples=False",
+    )
+    parser.add_argument(
+        "-j",
+        "--join",
+        action="store_true",
+        default=False,
+        help="If True events and messages will be joined into one big structure based on the trial number.",
+    )
+    args = parser.parse_args()
+    samples, events, messages = pread(args.edffile, ignore_samples=args.ignore_samples)
+
+    if args.join:
+        events = trials2events(events, messages)
+
+    if not args.pandas_hdf:
+        columns = [
+            col
+            for col in messages.columns
+            if not (messages[col].dtype == np.dtype("O"))
+        ]
+        messages = messages.loc[:, columns]
+        save_human_understandable(samples, events, messages, args.outputfile)
+    else:
+        events.to_hdf(args.outputfile, "events", mode="w", complevel=9, complib="zlib")
+        samples.to_hdf(
+            args.outputfile, "samples", mode="w", complevel=9, complib="zlib"
+        )
+        messages.to_hdf(
+            args.outputfile, "messages", mode="w", complevel=9, complib="zlib"
+        )

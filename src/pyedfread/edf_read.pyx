@@ -134,9 +134,8 @@ def read_messages(filename, startswith=None, consistency=0):
 
 def read_calibration(filename, consistency=0):
     """Read calibration/validation messages from an EDF file."""
-    messages = read_messages(
-        filename, startswith=['!VAL', '!CAL'], consistency=consistency
-    )
+    start = ['!VAL', '!CAL']
+    messages = read_messages(filename, startswith=start, consistency=consistency)
     return messages
 
 

@@ -100,14 +100,6 @@ def read_preamble(filename, consistency=0):
     return buf
 
 
-def read_calibration(filename, consistency=0):
-    """Read calibration/validation messages from an EDF file."""
-    messages = read_messages(
-        filename, startswith=['!VAL', '!CAL'], consistency=consistency
-    )
-    return messages
-
-
 def read_messages(filename, startswith=None, consistency=0):
     """Read messages from an edf file."""
     if startswith is not None:
@@ -136,6 +128,14 @@ def read_messages(filename, startswith=None, consistency=0):
                 if (startswith is None or
                         any([message.startswith(s) for s in startswith])):
                     messages.append(message)
+    return messages
+
+
+def read_calibration(filename, consistency=0):
+    """Read calibration/validation messages from an EDF file."""
+    messages = read_messages(
+        filename, startswith=['!VAL', '!CAL'], consistency=consistency
+    )
     return messages
 
 

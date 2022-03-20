@@ -7,7 +7,7 @@ Only compares readout of samples at the moment.
 from pkg_resources import resource_filename
 import pytest
 import numpy as np
-from pyedfread import edf
+import pyedfread as edf
 
 
 @pytest.fixture(scope="session")

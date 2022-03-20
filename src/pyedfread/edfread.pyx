@@ -166,7 +166,7 @@ cdef parse_edf(filename, ignore_samples, filter, split_char, trial_marker):
     event_accumulator = []
     ef = edf_open_file(filename.encode('utf-8'), 0, 1, 1, & errval)
     if errval < 0:
-        raise IOError('Could not open: %s' % filename)
+        raise IOError(f'Could not open: {filename}')
     e = edf_get_preamble_text(ef, buf, 1024)
     num_elements = edf_get_element_count(ef)
     if ignore_samples:

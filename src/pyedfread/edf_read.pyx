@@ -92,7 +92,7 @@ def read_preamble(filename, consistency=0):
     cdef int * ef
     ef = edf_open_file(filename.encode('utf-8'), consistency, 1, 1, & errval)
     if errval < 0:
-        raise IOError('Could not open: %s' % filename)
+        raise IOError(f'Could not open file: {filename}')
     cdef int psize = edf_get_preamble_text_length(ef)
     cdef char * buf = <char * > malloc(psize * sizeof(char))
     e = edf_get_preamble_text(ef, buf, psize)
@@ -107,7 +107,7 @@ def read_messages(filename, startswith=None, consistency=0):
     cdef char * msg
     ef = edf_open_file(filename.encode('utf-8'), consistency, 1, 1, & errval)
     if errval < 0:
-        raise IOError('Could not open: %s' % filename)
+        raise IOError(f'Could not open file: {filename}')
 
     messages = []
     samples = []

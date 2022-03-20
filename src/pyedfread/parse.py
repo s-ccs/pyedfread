@@ -51,7 +51,7 @@ def read_edf(
         Message information.
     """
     if not os.path.isfile(filename):
-        raise RuntimeError('File "%s" does not exist' % filename)
+        raise RuntimeError(f"File does not exist: {filename}")
 
     samples, events, messages = edf_read.parse_edf(
         filename, ignore_samples, filter, trial_marker

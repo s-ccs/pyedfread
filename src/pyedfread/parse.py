@@ -9,7 +9,7 @@ import argparse
 def read_edf(
     filename,
     ignore_samples=False,
-    filter=None,
+    message_filter=None,
     trial_marker="TRIALID",
 ):
     """
@@ -32,7 +32,7 @@ def read_edf(
         If true individual samples will not be saved, but only event
         averages.
 
-    filter : list of str, optional
+    message_filter : list of str, optional
         Messages are kept only if they start with one of these strings.
 
     trial_marker : str, optional
@@ -54,7 +54,7 @@ def read_edf(
         raise RuntimeError(f"File does not exist: {filename}")
 
     samples, events, messages = edf_read.parse_edf(
-        filename, ignore_samples, filter, trial_marker
+        filename, ignore_samples, message_filter, trial_marker
     )
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)

@@ -215,7 +215,7 @@ def parse_datum(
     return current_event
 
 
-def parse_message(data, trial, message_accumulator, filter, trial_marker):
+def parse_message(data, trial, message_accumulator, message_filter, trial_marker):
     """Parse message information based on message type."""
     message = data['message'].decode('utf-8').replace('\x00', '').strip()
     if message.startswith(trial_marker):
@@ -224,14 +224,14 @@ def parse_message(data, trial, message_accumulator, filter, trial_marker):
         else:
             trial += 1
 
-    if filter is None or any([message.startwith(s) for s in filter]):
+    if message_filter is None or any([message.startwith(s) for s in message_filter]):
         info = {'time': data['start'], 'trial': trial, 'message': message}
         message_accumulator.append(info)
     return trial
 
 
 def parse_edf(
-    filename, ignore_samples=False, filter=None, trial_marker='TRIALID'
+    filename, ignore_samples=False, message_filter=None, trial_marker='TRIALID'
 ):
     """Read samples, events, and messages from an EDF file."""
     cdef int errval = 1
@@ -318,7 +318,7 @@ def parse_edf(
         elif sample_type == MESSAGEEVENT:
             data = data2dict(sample_type, ef)
             trial = parse_message(
-                data, trial, message_accumulator, filter, trial_marker
+                data, trial, message_accumulator, message_filter, trial_marker
             )
 
         else:

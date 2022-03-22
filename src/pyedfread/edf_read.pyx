@@ -234,8 +234,6 @@ def parse_edf(
     filename, ignore_samples=False, filter=None, trial_marker='TRIALID'
 ):
     """Read samples, events, and messages from an EDF file."""
-    if filter is None:
-        filter = []
     cdef int errval = 1
     cdef char * buf = < char * > malloc(1024 * sizeof(char))
     cdef int * ef

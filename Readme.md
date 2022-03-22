@@ -87,7 +87,7 @@ field condition with value 1 for each trial to the messages structure. Of course
 if the value varies across trials this will be reflected in the messages
 structure. This is what it looks like in python code:
 
-	>>> samples, events, messages = edf.read_edf('SUB001.EDF', ignore_samples=True, filter=['condition'])
+	>>> samples, events, messages = edf.read_edf('SUB001.EDF', ignore_samples=True, message_filter=['condition'])
 
 If the filter is not specified, edfread saves all messages it can parse.
 
@@ -144,7 +144,7 @@ Command line
 If you have an EDF file with "standard" meta data (e.g. key and value are seperated by a
 blank) you can call
 
-	$> read_edf SUB001.EDF sub001.hdf
+	$> convert_edf SUB001.EDF sub001.hdf
 
 The .hdf file is a valid hdf5 file that can be read into matlab. The default is
 to simplify the HDF file by replacing strings with numbers. The original strings

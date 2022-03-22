@@ -1,5 +1,5 @@
 """
-Test pyedfread by comparing against edf2asc output.
+Test edfread by comparing against edf2asc output.
 
 Only compares readout of samples at the moment.
 """
@@ -7,13 +7,13 @@ Only compares readout of samples at the moment.
 from pkg_resources import resource_filename
 import pytest
 import numpy as np
-import pyedfread as edf
+import edfread as edf
 
 
 @pytest.fixture(scope="session")
 def edf_data():
     """Sample of read-in EDF data."""
-    edf_file = resource_filename("pyedfread", "data/SUB001.EDF")
+    edf_file = resource_filename("edfread", "data/SUB001.EDF")
     samples, events, messages = edf.read_edf(edf_file)
     data = {"samples": samples, "events": events, "messages": messages}
     return data
@@ -55,7 +55,7 @@ def test_validate_against_edf2asc(edf_data):
 
     # check the first n samples
     n = 100
-    asc_file = resource_filename("pyedfread", "data/SUB001.asc")
+    asc_file = resource_filename("edfread", "data/SUB001.asc")
     with open(asc_file) as asc:
         for i, line in enumerate(asc):
             if i == n:
@@ -79,6 +79,6 @@ def test_validate_against_edf2asc(edf_data):
 
 def test_ignore_samples():
     """Test option to ignore samples in EDF file."""
-    edf_file = resource_filename('pyedfread', 'data/SUB001.EDF')
+    edf_file = resource_filename('edfread', 'data/SUB001.EDF')
     samples, events, messages = edf.read_edf(edf_file, ignore_samples=True)
     assert samples.shape[0] == 0

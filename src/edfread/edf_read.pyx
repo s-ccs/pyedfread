@@ -9,7 +9,7 @@ import string
 from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 from libc.stdlib cimport malloc, free
 
-from pyedfread.edf_data import *
+from edfread.edf_data import *
 from pyedfread.data cimport ALLF_DATA
 
 import struct

@@ -49,9 +49,9 @@ else:  # linux, unix, cygwin
         "extra_link_args": ["-fopenmp"],
     }
 
-ext_module = Extension("pyedfread.edf_read", ["src/pyedfread/edf_read.pyx"], **args)
+ext_module = Extension("edfread.edf_read", ["src/edfread/edf_read.pyx"], **args)
 
-ext_data = Extension("pyedfread.edf_data", ["src/pyedfread/edf_data.pyx"], **args)
+ext_data = Extension("edfread.edf_data", ["src/edfread/edf_data.pyx"], **args)
 
 setup(
     cmdclass={'build_ext': build_ext},

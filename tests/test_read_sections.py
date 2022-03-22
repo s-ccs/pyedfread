@@ -2,12 +2,12 @@
 
 from pkg_resources import resource_filename
 import pytest
-import pyedfread as edf
+import edfread as edf
 
 
 @pytest.fixture(scope="session")
 def edf_file():
-    filepath = resource_filename("pyedfread", "data/SUB001.EDF")
+    filepath = resource_filename("edfread", "data/SUB001.EDF")
     return filepath
 
 

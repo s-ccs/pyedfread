@@ -28,8 +28,8 @@ sample_columns = ['time', 'px_left', 'px_right', 'py_left', 'py_right',
                   'rx', 'ry', 'gxvel_left', 'gxvel_right', 'gyvel_left',
                   'gyvel_right', 'hxvel_left', 'hxvel_right', 'hyvel_left',
                   'hyvel_right', 'rxvel_left', 'rxvel_right', 'ryvel_left',
-                  'ryvel_right', 'fgxvel', 'fgyvel', 'fhxyvel', 'fhyvel',
-                  'frxyvel', 'fryvel', 'flags', 'input', 'buttons', 'htype',
+                  'ryvel_right', 'fgxvel', 'fgyvel', 'fhxvel', 'fhyvel',
+                  'frxvel', 'fryvel', 'flags', 'input', 'buttons', 'htype',
                   'errors']
 
 

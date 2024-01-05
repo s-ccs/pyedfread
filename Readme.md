@@ -70,10 +70,6 @@ This opens SUB001.EDF and parses it three DataFrames:
  - events contains fixation and saccade definitions
  - messages contains meta data associated with each trial.
 
-To add the trial meta data into the eye tracking data run:
-
-    >>> events = edf.trials2events(events, messages)
-
 edfread allows to select which meta data you want to read from your edf file.
 This happens through the 'filter' argument of edf.pread / edfread.fread. It can
 contain a list of 'message' identifiers. A message identifier in the EDF is

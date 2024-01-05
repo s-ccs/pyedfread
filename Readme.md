@@ -2,7 +2,7 @@ edfread
 =======
 
 A utility that parses SR research EDF data files into pandas DataFrames.
-The edfread package is a fork of [pyedfread](https://github.com/nwilming/pyedfread) by Niklas Wilming.
+This package is a fork of [pyedfread](https://github.com/edfread/edfread) aimed at solving some linux installation problems.
 
 Requirements
 ============
@@ -15,10 +15,6 @@ EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr
  > download a package from the SR-Research support forum. If you use Ubuntu you
  > can install them via apt-get. The setup.py might not run properly on a linux
  > box, because I don't have one around for testing.
- >
- > If you use any other linux distribution, download the API files and place
- > libedfapi.so in lib/ and \*.h files in include. Setup.py should be able to
- > work with this.
  
 ### Windows Support
 As of this writing (July 2019), the EyeLink Developers Kit for Windows requires small modifications
@@ -51,7 +47,7 @@ for updates.
 Setup
 =====
 
-Run  `pip install git+https://github.com/mortonne/edfread` to compile and install. This will install the
+Run  `pip install git+https://github.com/costantinoai/edfread` to compile and install. This will install the
 python library and a command line script to parse edfs.
 
 Usage

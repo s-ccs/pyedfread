@@ -42,7 +42,7 @@ elif sys.platform.startswith("win32"):
     }
 else:  # linux, unix, cygwin
     args = {
-        "include_dirs": [numpy.get_include(), "include/"],
+        "include_dirs": [numpy.get_include(), "include/", '/usr/include/EyeLink/'],
         "library_dirs": ["lib/"],
         "libraries": ["edfapi"],
         "extra_compile_args": ["-fopenmp"],

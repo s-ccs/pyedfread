@@ -2,7 +2,7 @@ edfread
 =======
 
 A utility that parses SR research EDF data files into pandas DataFrames.
-This package is a fork of [pyedfread](https://github.com/edfread/edfread) aimed at solving some linux installation problems.
+This package is a fork of [pyedfread](https://github.com/mortonne/edfread) aimed at solving some linux installation problems.
 
 Requirements
 ============

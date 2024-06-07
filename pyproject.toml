@@ -1,3 +1,39 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy", "cython"]
 build-backend = "setuptools.build_meta"
+
+
+[metadata]
+name = pyedfread
+version = 0.2.0
+description = Read SR-Research EDF files.
+keywords = psychology, neuroscience
+license = BSD-2-Clause
+classifiers =
+    Programming Language :: Python :: 3
+    License :: OSI Approved :: BSD 2-Clause "Simplified" License (BSD-2-Clause)
+    Operating System :: OS Independent
+[options]
+install_requires =
+    numpy
+    pandas
+    h5py
+package_dir =
+    = src
+packages = find:
+
+[options.package_data]
+pyedfread = data/*.asc, data/*.EDF
+
+[options.packages.find]
+where = src
+
+[options.extras_require]
+test = pytest
+
+[options.entry_points]
+console_scripts =
+    convert_edf = pyedfread:parse.convert_edf
+~                                                                                                    
+~                                                                                                    
+

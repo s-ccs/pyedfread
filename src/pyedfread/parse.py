@@ -1,4 +1,4 @@
-from edfread import edf_read
+from pyedfread import edf_read
 import numpy as np
 import pandas as pd
 import h5py

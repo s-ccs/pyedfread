@@ -29,14 +29,26 @@ If you are willing to run `edf2asc` on all your files, you can use:
 
 [eyelinkparser](https://github.com/open-cogsci/eyelinkparser)
 
+## Contributors
+- Niklas Wilming
+- Selim Onat
+- Chadwick Boulay
+- Niel Morton
+- Andreas Constantino
+- Benedikt Ehinger (maintainer)
 
-## The following might be outdated (07-06-2024)
+## Setup
+
+Run  `pip install git+https://github.com/s-ccs/pyedfread` to compile and install. This will install the
+python library and a command line script to parse edfs.
+
+
 ### Windows Support
 As of this writing (July 2019), the EyeLink Developers Kit for Windows requires small modifications
 before it will work with this project. Administrator access is required to edit the files
-in their default directory: C:\Program Files (x86)\SR Research\EyeLink\EDF_Access_API\Example
+in their default directory: C:\Program Files (x86)\SR Research\EyeLink\Includes\eyelink/
 
-Edit edftypes.h. Replace the chunk of typedefs (lines 16-25) with the following:
+Edit edftypes.h. Replace the chunk of typedefs (lines 40-49) with the following:
 ```C
 #ifndef BYTEDEF
 	#define BYTEDEF 1
@@ -50,36 +62,20 @@ Edit edftypes.h. Replace the chunk of typedefs (lines 16-25) with the following:
 #endif
 ```
 
+Some user reported the following, but in 2024 BenediktEhinger didnt need this:
+
 One of the DLLs from SR Research (zlibwapi.dll) depends on MSVCP90.dll.
 This _should_ come with MS Visual Studio C++ 2008 SP1 redistributable, but its installer didn't seem to put the file on the PATH.
 Instead, I had already installed [Mercurial for Windows](https://www.mercurial-scm.org/release/windows/mercurial-4.9.1-x64.msi)
 which comes with the correct version of that file and puts it on the PATH by default.
 
-Follow [this sr-support forum post](https://www.sr-support.com/forum/eyelink/programming/56478-edf_data-h-use-uint8-instead-of-byte)
-for updates.
  
-## Contributors
-- Niklas Wilming
-- Selim Onat
-- Chadwick Boulay
-- Niel Morton
-- Andreas Constantino
-- Benedikt Ehinger (maintainer)
-
-## Setup
-
-
-Run  `pip install git+https://github.com/s-ccs/pyedfread` to compile and install. This will install the
-python library and a command line script to parse edfs.
-
 ## Usage
-
 
 pyedfread can be used on the command line (convert_edf) or called from
 within python.
 
 ## From python
-
 
 After compilation run the following lines for a quick test.
 

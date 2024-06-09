@@ -16,6 +16,15 @@ EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr
  > can install them via apt-get.
  
 
+## Alternatives
+Due to the "unmaintained" status of this repo ca. 2019-2024 some alternatives came up:
+[eyelinkio](https://github.com/scott-huberty/eyelinkio)
+
+If you are willing to run `edf2asc` on all your files, you can use:
+[mne-python]()
+[ParseEyeLinkAscFiles](https://github.com/djangraw/ParseEyeLinkAscFiles)
+[eyelinkparser](https://github.com/open-cogsci/eyelinkparser)
+
 
 ## The following might be outdated (07-06-2024)
 ### Windows Support

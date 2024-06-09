@@ -34,8 +34,11 @@ If you are willing to run `edf2asc` on all your files, you can use:
 - Selim Onat
 - Chadwick Boulay
 - Niel Morton
-- Andreas Constantino
+- Andrea Constantino
 - Benedikt Ehinger (maintainer)
+- Alex Kim
+- Greg Schwimer
+- Oscar Esteban
 
 ## Setup
 

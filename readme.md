@@ -1,11 +1,11 @@
-pyedfread
-=======
+# pyedfread
+
 
 A utility that parses SR research EDF data files into pandas DataFrames.
 This package was initially developed by [Niklas Wilming](https://github.com/nwilming/) and updated by [Neal Morton](https://github.com/mortonne/) under the name of `edfread`. Now it is maintained by the [Computational Cognitive Science Stuttgart](www.s-ccs.de) group with official permission from Wilming & Morton.
 
-Requirements
-============
+## Requirements
+
 
 EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr-support.com/forum/downloads/eyelink-display-software)
  (forum registration required).
@@ -51,22 +51,22 @@ for updates.
 - Chadwick Boulay
 - Niel Morton
 - Andreas Constantino
-- Benedikt Ehinger
+- Benedikt Ehinger (maintainer)
 
-Setup
-=====
+## Setup
+
 
 Run  `pip install git+https://github.com/s-ccs/pyedfread` to compile and install. This will install the
 python library and a command line script to parse edfs.
 
-Usage
-=====
+## Usage
+
 
 pyedfread can be used on the command line (convert_edf) or called from
 within python.
 
-From python
------------
+## From python
+
 
 After compilation run the following lines for a quick test.
 
@@ -140,8 +140,8 @@ Some examples for events:
  - gavx, gavy -  average gaze location
 
 
-Command line
-============
+## Command line
+
 
 If you have an EDF file with "standard" meta data (e.g. key and value are seperated by a
 blank) you can call
@@ -156,8 +156,8 @@ arrays, lists etc.) are skipped.
 Run 'read_edf -h' for some help.
 
 
-Matlab
-======
+## Matlab
+
 
 To read a datamat into matlab do this:
 
@@ -166,7 +166,16 @@ To read a datamat into matlab do this:
     >> field = h5read('SUB001.hdf', '/events/gavx');
 
 
-License
-=======
+## Testing
+While there are some basic unit-testing setup, it is currently not possible to use continuous integration, as we cannot provide the required SR-Research libraries.
+
+if you want to run the test use:
+
+`tox -e py`
+
+after cloning
+
+## License
+
 
 BSD License, see LICENSE file

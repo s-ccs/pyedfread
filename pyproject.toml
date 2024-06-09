@@ -3,37 +3,43 @@ requires = ["setuptools", "wheel", "numpy", "cython"]
 build-backend = "setuptools.build_meta"
 
 
-[metadata]
-name = pyedfread
-version = 0.2.0
-description = Read SR-Research EDF files.
-keywords = psychology, neuroscience
-license = BSD-2-Clause
-classifiers =
-    Programming Language :: Python :: 3
-    License :: OSI Approved :: BSD 2-Clause "Simplified" License (BSD-2-Clause)
-    Operating System :: OS Independent
-[options]
-install_requires =
-    numpy
-    pandas
-    h5py
-package_dir =
-    = src
-packages = find:
+[project]
+name = "pyedfread"
+version = "0.2.0"
+description = "Read SR-Research EDF files."
+keywords = ["psychology", "neuroscience", "eyelink", "sr-research", "edf"]
 
-[options.package_data]
-pyedfread = data/*.asc, data/*.EDF
+license = {file="LICENSE"}
+classifiers =[
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD 2-Clause "Simplified" License (BSD-2-Clause)",
+    "Operating System :: OS Independent"
+]
+dependencies =[
+    "numpy",
+    "pandas"
+    "h5py"]
+authors = [
+  {name = "Niklas Wilming"},
+  {name = "Niel Morton"},
+  {name = "Benedikt Ehinger"},
+]
+maintainers = [
+  {name = "Benedikt Ehinger", email = "pyedfread@benediktehinger.de"}
+]
+readme = "readme.md"
 
-[options.packages.find]
-where = src
+[project.package_data]
+pyedfread = ["data/*.asc", "data/*.EDF"]
 
-[options.extras_require]
-test = pytest
+[project.packages.find]
+where = "src"
 
-[options.entry_points]
-console_scripts =
-    convert_edf = pyedfread:parse.convert_edf
+[project.extras_require]
+test = "pytest"
+
+[project.scripts]
+convert_edf = "pyedfread:parse.convert_edf"
 ~                                                                                                    
 ~                                                                                                    
 

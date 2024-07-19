@@ -9,6 +9,8 @@ import string
 from libc.stdint cimport int16_t, uint16_t, uint32_t, int64_t
 from libc.stdlib cimport malloc, free
 
+from libc.stdio cimport printf
+
 from pyedfread.edf_data import *
 from pyedfread.data cimport ALLF_DATA
 
@@ -203,15 +205,19 @@ def parse_datum(
 
     if (sample_type == STARTFIX) or (sample_type == STARTSACC):
         current_event = data
-        current_event['blink'] = False
+        current_event['contains_blink'] = False
         current_event['trial'] = trial
+
 
     if (sample_type == ENDFIX) or (sample_type == ENDSACC):
         current_event.update(data)
         event_accumulator.append(current_event)
 
     if (sample_type == STARTBLINK) or (sample_type == ENDBLINK):
-        current_event['blink'] = True
+        current_event['contains_blink'] = True
+        if (sample_type == ENDBLINK):
+            event_accumulator.append(data)
+
     return current_event
 
 

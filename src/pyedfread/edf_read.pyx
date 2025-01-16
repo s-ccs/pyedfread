@@ -73,7 +73,7 @@ sample_columns = [
 
 cdef extern from "edf.h":
     ctypedef int EDFFILE
-    int * edf_open_file(
+    EDFFILE * edf_open_file(
         const char * fname,
         int consistency,
         int load_events,
@@ -91,7 +91,7 @@ cdef extern from "edf.h":
 def read_preamble(filename, consistency=0):
     """Read preamble of EDF file."""
     cdef int errval = 1
-    cdef int * ef
+    cdef EDFFILE * ef
     ef = edf_open_file(filename.encode('utf-8'), consistency, 1, 1, & errval)
     if errval < 0:
         raise IOError(f'Could not open file: {filename}')
@@ -105,7 +105,7 @@ def read_preamble(filename, consistency=0):
 def read_messages(filename, startswith=None, consistency=0):
     """Read messages from an edf file."""
     cdef int errval = 1
-    cdef int * ef
+    cdef EDFFILE * ef
     cdef char * msg
     ef = edf_open_file(filename.encode('utf-8'), consistency, 1, 1, & errval)
     if errval < 0:
@@ -141,7 +141,7 @@ def read_calibration(filename, consistency=0):
     return messages
 
 
-cdef data2dict(sample_type, int * ef):
+cdef data2dict(sample_type, EDFFILE * ef):
     """Convert EDF event to a dictionary."""
     fd = edf_get_float_data(ef)
     cdef char * msg
@@ -242,7 +242,7 @@ def parse_edf(
     """Read samples, events, and messages from an EDF file."""
     cdef int errval = 1
     cdef char * buf = < char * > malloc(1024 * sizeof(char))
-    cdef int * ef
+    cdef EDFFILE * ef
     cdef int sample_type, cnt, trial
 
     # open the file

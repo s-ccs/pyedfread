@@ -39,6 +39,7 @@ If you are willing to run `edf2asc` on all your files, you can use:
 - Alex Kim
 - Greg Schwimer
 - Oscar Esteban
+- Richard Veale
 
 ## Setup
 

@@ -9,9 +9,10 @@ To build locally call
 """
 
 import sys
-from distutils.core import setup
-from distutils.extension import Extension
+#from distutils.core import setup
+#from distutils.extension import Extension
 from Cython.Distutils import build_ext
+from setuptools import setup,find_packages, Extension
 import numpy
 
 
@@ -49,7 +50,7 @@ else:  # linux, unix, cygwin
         "extra_link_args": ["-fopenmp"],
     }
 
-
+print(args)
 ext_module = Extension("pyedfread.edf_read", ["src/pyedfread/edf_read.pyx"], **args)
 
 ext_data = Extension("pyedfread.edf_data", ["src/pyedfread/edf_data.pyx"], **args)
@@ -57,4 +58,6 @@ ext_data = Extension("pyedfread.edf_data", ["src/pyedfread/edf_data.pyx"], **arg
 setup(
     cmdclass={'build_ext': build_ext},
     ext_modules=[ext_data, ext_module],
+    packages = find_packages(where='src'),
+    package_dir = {"": "src"},
 )

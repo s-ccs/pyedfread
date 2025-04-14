@@ -335,5 +335,5 @@ def parse_edf(
     free(buf)
     # num_elements contained number of combined samples, messages, and events. This truncates
     # to only number of samples read (cnt).
-    samples = samples[:cnt]; 
+    samples = samples[:cnt, :]; 
     return samples, event_accumulator, message_accumulator

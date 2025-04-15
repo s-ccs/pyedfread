@@ -11,7 +11,7 @@ def read_edf(
     ignore_samples=False,
     message_filter=None,
     trial_marker="TRIALID",
-    ftime=False
+    ftime=True
 ):
     """
     Parse an EDF file into a pandas.DataFrame.
@@ -40,7 +40,7 @@ def read_edf(
         Messages that start with this string will be assumed to
         indicate the start of a trial.
 
-    ftime: bool, optional
+    ftime: bool, optional (default True)
         If true, times are converted to floating point (from default int32) and 0.5 msec intervals are added
         for approriate 2000 hz recordings. Otherwise, int times are simply doubled up for 2k hz recordings.
 

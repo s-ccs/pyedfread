@@ -36,7 +36,7 @@ elif sys.platform.startswith("win32"):
     else:
         arch_dir = ''
         lib_names = ['edfapi']
-    args = {'include_dirs': [numpy.get_include(), os.path.join(srr_basedir, 'Includes')],
+    args = {'include_dirs': [numpy.get_include(), os.path.join(srr_basedir, 'Includes'),os.path.join(srr_basedir, 'Includes',"eyelink")],
             'library_dirs': [os.path.join(srr_basedir, 'libs', arch_dir)],
             'libraries': lib_names
             }

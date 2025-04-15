@@ -21,7 +21,6 @@ def edf_data():
 def test_samples(edf_data):
     samples = edf_data["samples"]
 
-    # test for #37
     assert samples[samples.time.diff()!=1].shape == (1,40)
 
 

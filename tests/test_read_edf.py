@@ -42,6 +42,8 @@ def test_messages(edf_data):
 def test_events(edf_data):
     """Compare events to known values."""
     events = edf_data["events"]
+    assert events.shape == (500, 30)
+    events = events.query("type!='blink'")
     assert events.shape == (485, 30)
     np.testing.assert_allclose(events["gavx"].mean(), 420.842680343156)
     np.testing.assert_allclose(events["gavy"].mean(), 205.318144115959)

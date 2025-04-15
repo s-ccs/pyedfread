@@ -235,6 +235,96 @@ def parse_message(data, trial, message_accumulator, message_filter, trial_marker
         message_accumulator.append(info)
     return trial
 
+def create_sample_array_memory(num_elements):
+    #First, just initialize all to float to save time.
+    # Note, num_elements is longer than the maximum that we will
+    # actually hold, so we must be sure to truncate at very end
+    # of parse.
+    mydict = {  colname : np.ndarray(num_elements, dtype=np.float64)  for colname in sample_columns };
+    #Then, reallocate only those which are not float64s...
+    mydict['time'] = np.ndarray(num_elements, dtype=np.uint32);
+    mydict['flags'] = np.ndarray(num_elements, dtype=np.uint16);
+    mydict['input'] = np.ndarray(num_elements, dtype=np.uint16);
+    mydict['buttons'] = np.ndarray(num_elements, dtype=np.uint16);
+    mydict['htype'] = np.ndarray(num_elements, dtype=np.int16);
+    mydict['errors'] = np.ndarray(num_elements, dtype=np.uint16);
+    # mydict['hdata'] is not included but may be added in future
+    # (it is reserved for future use).
+    # REV: We should check that htype is always 0. If not, this must
+    # be fixed to address new API/capabilities.
+    return mydict;
+
+def parse_sample(fd, cnt, samples):
+    """
+    REV: sets a single row of "samples" by setting the "cnt"th
+    row in each 1d array stored in samples dict. Reason to do this
+    over NDARRAY is that each row may have different type
+    (e.g. some are UINT16 flags)
+
+    input:
+    -  fd, the edf_get_float_data(ef) returned struct
+    -  cnt, size_t offset into array to write to
+    -  samples, dict already created by create_sample_array_memory
+    output:
+    -  returns samples with updated values.
+    """
+
+    startsize = len(samples);
+    
+    # We may have to re-order sorted dict order into
+    # sample_columns before returning DF if we care.
+    samples['time'][cnt] = fd.fs.time; #0
+    samples['px_left'][cnt] = float(fd.fs.px[0]); #1
+    samples['px_right'][cnt] = float(fd.fs.px[1]); #2
+    samples['py_left'][cnt] = float(fd.fs.py[0]); #3
+    samples['py_right'][cnt] = float(fd.fs.py[1]); #4
+    samples['hx_left'][cnt] = float(fd.fs.hx[0]); #5
+    samples['hx_right'][cnt] = float(fd.fs.hx[1]); #6
+    samples['hy_left'][cnt] = float(fd.fs.hy[0]); #7
+    samples['hy_right'][cnt] = float(fd.fs.hy[1]); #8
+    samples['pa_left'][cnt] = float(fd.fs.pa[0]); #9
+    samples['pa_right'][cnt] = float(fd.fs.pa[1]); #10
+    samples['gx_left'][cnt] = float(fd.fs.gx[0]); #11
+    samples['gx_right'][cnt] = float(fd.fs.gx[1]); #12
+    samples['gy_left'][cnt] = float(fd.fs.gy[0]); #13
+    samples['gy_right'][cnt] = float(fd.fs.gy[1]); #14
+    samples['rx'][cnt] = float(fd.fs.rx); #15
+    samples['ry'][cnt] = float(fd.fs.ry); #16
+    samples['gxvel_left'][cnt] = float(fd.fs.gxvel[0]); #17
+    samples['gxvel_right'][cnt] = float(fd.fs.gxvel[1]); #18
+    samples['gyvel_left'][cnt] = float(fd.fs.gyvel[0]); #19
+    samples['gyvel_right'][cnt] = float(fd.fs.gyvel[1]); #20
+    samples['hxvel_left'][cnt] = float(fd.fs.hxvel[0]); #21
+    samples['hxvel_right'][cnt] = float(fd.fs.hxvel[1]); #22
+    samples['hyvel_left'][cnt] = float(fd.fs.hyvel[0]); #23
+    samples['hyvel_right'][cnt] = float(fd.fs.hyvel[1]); #24
+    samples['rxvel_left'][cnt] = float(fd.fs.rxvel[0]); #25
+    samples['rxvel_right'][cnt] = float(fd.fs.rxvel[1]); #26
+    samples['ryvel_left'][cnt] = float(fd.fs.ryvel[0]); #27
+    samples['ryvel_right'][cnt] = float(fd.fs.ryvel[1]); #28
+
+    ## REV: These are all accessing 0th element for some reason
+    samples['fgxvel'][cnt] = float(fd.fs.fgxvel[0]); #29
+    samples['fgyvel'][cnt] = float(fd.fs.fgyvel[0]); #30
+    samples['fhxvel'][cnt] = float(fd.fs.fhxvel[0]); #31
+    samples['fhyvel'][cnt] = float(fd.fs.fhyvel[0]); #32
+    samples['frxvel'][cnt] = float(fd.fs.frxvel[0]); #33
+    samples['fryvel'][cnt] = float(fd.fs.fryvel[0]); #34
+    
+    # samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data
+    # (not prescaled)
+    
+    samples['flags'][cnt] = fd.fs.flags; #35
+    samlpes['input'][cnt] = fd.fs.input; #36 # extra (input word)
+    samples['buttons'][cnt] = fd.fs.buttons  #37 # button state & changes
+    samples['htype'][cnt] = fd.fs.htype; #38  # head-tracker data type
+    samples['errors'][cnt] = fd.fs.errors; #39
+
+    if( len(samples) != startsize ):
+        raise Exception("REV: you messed up and typed something wrong in dict names");
+    
+    return samples;
+
 
 def parse_edf(
     filename, ignore_samples=False, message_filter=None, trial_marker='TRIALID'
@@ -255,9 +345,10 @@ def parse_edf(
     num_elements = edf_get_element_count(ef)
     if ignore_samples:
         num_elements = 0
-    cdef np.ndarray npsamples = np.ndarray((num_elements, 40), dtype=np.float64)
-    cdef np.float64_t[:, :] samples = npsamples
 
+    
+    create_sample_array_memory(num_elements);
+    
     # parse samples and events
     trial = -1
     cnt = 0
@@ -273,52 +364,7 @@ def parse_edf(
 
         if not ignore_samples and (sample_type == SAMPLE_TYPE):
             fd = edf_get_float_data(ef)
-            # Map fields explicitly into memory view
-            samples[cnt, 0] = float(fd.fs.time)
-            samples[cnt, 1] = float(fd.fs.px[0])
-            samples[cnt, 2] = float(fd.fs.px[1])
-            samples[cnt, 3] = float(fd.fs.py[0])
-            samples[cnt, 4] = float(fd.fs.py[1])
-            samples[cnt, 5] = float(fd.fs.hx[0])
-            samples[cnt, 6] = float(fd.fs.hx[1])
-            samples[cnt, 7] = float(fd.fs.hy[0])
-            samples[cnt, 8] = float(fd.fs.hy[1])
-            samples[cnt, 9] = float(fd.fs.pa[0])
-            samples[cnt, 10] = fd.fs.pa[1]
-            samples[cnt, 11] = fd.fs.gx[0]
-            samples[cnt, 12] = fd.fs.gx[1]
-            samples[cnt, 13] = fd.fs.gy[0]
-            samples[cnt, 14] = fd.fs.gy[1]
-            samples[cnt, 15] = fd.fs.rx
-            samples[cnt, 16] = fd.fs.ry
-
-            samples[cnt, 17] = fd.fs.gxvel[0]
-            samples[cnt, 18] = fd.fs.gxvel[1]
-            samples[cnt, 19] = fd.fs.gyvel[0]
-            samples[cnt, 20] = fd.fs.gyvel[1]
-            samples[cnt, 21] = fd.fs.hxvel[0]
-            samples[cnt, 22] = fd.fs.hxvel[1]
-            samples[cnt, 23] = fd.fs.hyvel[0]
-            samples[cnt, 24] = fd.fs.hyvel[1]
-            samples[cnt, 25] = fd.fs.rxvel[0]
-            samples[cnt, 26] = fd.fs.rxvel[1]
-            samples[cnt, 27] = fd.fs.ryvel[0]
-            samples[cnt, 28] = fd.fs.ryvel[1]
-
-            samples[cnt, 29] = fd.fs.fgxvel[0]
-            samples[cnt, 30] = fd.fs.fgyvel[0]
-            samples[cnt, 31] = fd.fs.fhxvel[0]
-            samples[cnt, 32] = fd.fs.fhyvel[0]
-            samples[cnt, 33] = fd.fs.frxvel[0]
-            samples[cnt, 34] = fd.fs.fryvel[0]
-
-            # samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data
-            # (not prescaled)
-            samples[cnt, 35] = fd.fs.flags  # flags to indicate contents
-            samples[cnt, 36] = fd.fs.input  # extra (input word)
-            samples[cnt, 37] = fd.fs.buttons  # button state & changes
-            samples[cnt, 38] = fd.fs.htype  # head-tracker data type
-            samples[cnt, 39] = fd.fs.errors
+            samples = parse_sample(fd, cnt, samples);
             cnt += 1
 
         elif sample_type == MESSAGEEVENT:
@@ -333,7 +379,37 @@ def parse_edf(
                 data, sample_type, trial, current_event, event_accumulator
             )
     free(buf)
+
     # num_elements contained number of combined samples, messages, and events. This truncates
     # to only number of samples read (cnt).
-    samples = samples[:cnt, :]; 
+    for key in samples:
+        samples[key] = samples[key][:cnt];
+        pass;
+    
     return samples, event_accumulator, message_accumulator
+
+
+
+#REV: converts samples 'time' column from default uint32 to float64, with 0.5 msec offsets.
+def samples_to_ftime(samples):
+    """
+    Converts time column from uint32 to float64, and adds 0.5 for each with flags column
+    SAMPLE_ADD_OFFSET bit set true.
+
+    Input: pandas dataframe samples.
+
+    Output: Returns modified dataframe samples with time converted to float64, and with appropriate OFFSET
+    added.
+    """
+    bitmask = SAMPLE_ADD_OFFSET; #bitmask = 0x0002;
+    HALFMS=0.5; #unit is already MSEC for edf's "time".
+    if( samples['flags'].dtype != np.uint16 ):
+        raise Exception("ERROR: flags should be of unsigned integer type for bitwise and to work properly")
+    samples['_halfms'] = (0 != (bitmask & samples['flags']));
+    samples['time'] = samples['time'].astype(np.float64);
+    s.loc[ (True==s['_halfms']), 'time' ] += HALFMS;
+    
+    # Drop temporary _halfms column
+    samples = samples[ [a for a in samples.columns if a is not '_halfms' ] ];
+    
+    return samples;

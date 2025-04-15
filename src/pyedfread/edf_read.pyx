@@ -379,7 +379,6 @@ def parse_edf(
                 data, sample_type, trial, current_event, event_accumulator
             )
     free(buf)
-
     # num_elements contained number of combined samples, messages, and events. This truncates
     # to only number of samples read (cnt).
     for key in samples:

@@ -64,11 +64,11 @@ def read_edf(
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
     samples = pd.DataFrame(samples)
-
+    
     if( True == ftime ):
         samples = samples_to_ftimes(samples);
         pass;
-
+    
     ## Reorder samples column to be in same order as previously (based on FSAMPLE struct)
     samples = samples[ list(edf_read.sample_columns) ];
     

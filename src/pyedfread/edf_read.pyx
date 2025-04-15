@@ -254,78 +254,6 @@ def create_sample_array_memory(num_elements):
     # be fixed to address new API/capabilities.
     return mydict;
 
-def parse_sample(fd, cnt, samples):
-    """
-    REV: sets a single row of "samples" by setting the "cnt"th
-    row in each 1d array stored in samples dict. Reason to do this
-    over NDARRAY is that each row may have different type
-    (e.g. some are UINT16 flags)
-
-    input:
-    -  fd, the edf_get_float_data(ef) returned struct
-    -  cnt, size_t offset into array to write to
-    -  samples, dict already created by create_sample_array_memory
-    output:
-    -  returns samples with updated values.
-    """
-
-    startsize = len(samples);
-    
-    # We may have to re-order sorted dict order into
-    # sample_columns before returning DF if we care.
-    samples['time'][cnt] = fd.fs.time; #0
-    samples['px_left'][cnt] = float(fd.fs.px[0]); #1
-    samples['px_right'][cnt] = float(fd.fs.px[1]); #2
-    samples['py_left'][cnt] = float(fd.fs.py[0]); #3
-    samples['py_right'][cnt] = float(fd.fs.py[1]); #4
-    samples['hx_left'][cnt] = float(fd.fs.hx[0]); #5
-    samples['hx_right'][cnt] = float(fd.fs.hx[1]); #6
-    samples['hy_left'][cnt] = float(fd.fs.hy[0]); #7
-    samples['hy_right'][cnt] = float(fd.fs.hy[1]); #8
-    samples['pa_left'][cnt] = float(fd.fs.pa[0]); #9
-    samples['pa_right'][cnt] = float(fd.fs.pa[1]); #10
-    samples['gx_left'][cnt] = float(fd.fs.gx[0]); #11
-    samples['gx_right'][cnt] = float(fd.fs.gx[1]); #12
-    samples['gy_left'][cnt] = float(fd.fs.gy[0]); #13
-    samples['gy_right'][cnt] = float(fd.fs.gy[1]); #14
-    samples['rx'][cnt] = float(fd.fs.rx); #15
-    samples['ry'][cnt] = float(fd.fs.ry); #16
-    samples['gxvel_left'][cnt] = float(fd.fs.gxvel[0]); #17
-    samples['gxvel_right'][cnt] = float(fd.fs.gxvel[1]); #18
-    samples['gyvel_left'][cnt] = float(fd.fs.gyvel[0]); #19
-    samples['gyvel_right'][cnt] = float(fd.fs.gyvel[1]); #20
-    samples['hxvel_left'][cnt] = float(fd.fs.hxvel[0]); #21
-    samples['hxvel_right'][cnt] = float(fd.fs.hxvel[1]); #22
-    samples['hyvel_left'][cnt] = float(fd.fs.hyvel[0]); #23
-    samples['hyvel_right'][cnt] = float(fd.fs.hyvel[1]); #24
-    samples['rxvel_left'][cnt] = float(fd.fs.rxvel[0]); #25
-    samples['rxvel_right'][cnt] = float(fd.fs.rxvel[1]); #26
-    samples['ryvel_left'][cnt] = float(fd.fs.ryvel[0]); #27
-    samples['ryvel_right'][cnt] = float(fd.fs.ryvel[1]); #28
-
-    ## REV: These are all accessing 0th element for some reason
-    samples['fgxvel'][cnt] = float(fd.fs.fgxvel[0]); #29
-    samples['fgyvel'][cnt] = float(fd.fs.fgyvel[0]); #30
-    samples['fhxvel'][cnt] = float(fd.fs.fhxvel[0]); #31
-    samples['fhyvel'][cnt] = float(fd.fs.fhyvel[0]); #32
-    samples['frxvel'][cnt] = float(fd.fs.frxvel[0]); #33
-    samples['fryvel'][cnt] = float(fd.fs.fryvel[0]); #34
-    
-    # samples[cnt, 39:48] =  <float>fd.fs.hdata # head-tracker data
-    # (not prescaled)
-    
-    samples['flags'][cnt] = fd.fs.flags; #35
-    samlpes['input'][cnt] = fd.fs.input; #36 # extra (input word)
-    samples['buttons'][cnt] = fd.fs.buttons  #37 # button state & changes
-    samples['htype'][cnt] = fd.fs.htype; #38  # head-tracker data type
-    samples['errors'][cnt] = fd.fs.errors; #39
-
-    if( len(samples) != startsize ):
-        raise Exception("REV: you messed up and typed something wrong in dict names");
-    
-    return samples;
-
-
 def parse_edf(
     filename, ignore_samples=False, message_filter=None, trial_marker='TRIALID'
 ):
@@ -347,7 +275,7 @@ def parse_edf(
         num_elements = 0
 
     
-    create_sample_array_memory(num_elements);
+    samples = create_sample_array_memory(num_elements);
     
     # parse samples and events
     trial = -1
@@ -365,7 +293,7 @@ def parse_edf(
         if not ignore_samples and (sample_type == SAMPLE_TYPE):
             fd = edf_get_float_data(ef)
             #samples = parse_sample(fd, cnt, samples);
-
+	    
             # We may have to re-order sorted dict order into
             # sample_columns before returning DF if we care.
             
@@ -411,7 +339,7 @@ def parse_edf(
             # (not prescaled)
             
             samples['flags'][cnt] = fd.fs.flags; #35
-            samlpes['input'][cnt] = fd.fs.input; #36 # extra (input word)
+            samples['input'][cnt] = fd.fs.input; #36 # extra (input word)
             samples['buttons'][cnt] = fd.fs.buttons  #37 # button state & changes
             samples['htype'][cnt] = fd.fs.htype; #38  # head-tracker data type
             samples['errors'][cnt] = fd.fs.errors; #39

@@ -7,7 +7,7 @@ This package was initially developed by [Niklas Wilming](https://github.com/nwil
 ## Requirements
 
 
-EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr-support.com/forum/downloads/eyelink-display-software)
+EyeLink Developers Kit. Download from [SR-Research support forum](https://www.sr-research.com/support/thread-13.html)
  (forum registration required).
 
  > I do not include the SR Research EDF Access API header files and libraries.

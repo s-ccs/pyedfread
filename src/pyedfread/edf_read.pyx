@@ -386,7 +386,7 @@ def samples_to_ftime(samples):
         raise Exception("ERROR: flags should be of unsigned integer type for bitwise and to work properly")
     samples['_halfms'] = (0 != (bitmask & samples['flags']));
     samples['time'] = samples['time'].astype(np.float64);
-    s.loc[ (True==s['_halfms']), 'time' ] += HALFMS;
+    samples.loc[ (True==s['_halfms']), 'time' ] += HALFMS;
     
     # Drop temporary _halfms column
     samples = samples[ [a for a in samples.columns if a is not '_halfms' ] ];

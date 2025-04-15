@@ -230,7 +230,7 @@ def parse_message(data, trial, message_accumulator, message_filter, trial_marker
         else:
             trial += 1
 
-    if message_filter is None or any([message.startwith(s) for s in message_filter]):
+    if message_filter is None or any([message.startswith(s) for s in message_filter]):
         info = {'time': data['start'], 'trial': trial, 'message': message}
         message_accumulator.append(info)
     return trial

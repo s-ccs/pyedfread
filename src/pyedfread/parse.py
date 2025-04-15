@@ -66,7 +66,7 @@ def read_edf(
     samples = pd.DataFrame(samples)
     
     if( True == ftime ):
-        samples = edf_read.samples_to_ftimes(samples);
+        samples = edf_read.samples_to_ftime(samples);
         pass;
     
     ## Reorder samples column to be in same order as previously (based on FSAMPLE struct)

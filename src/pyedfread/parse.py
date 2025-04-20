@@ -11,6 +11,7 @@ def read_edf(
     ignore_samples=False,
     message_filter=None,
     trial_marker="TRIALID",
+    ftime=True,
 ):
     """
     Parse an EDF file into a pandas.DataFrame.
@@ -39,6 +40,10 @@ def read_edf(
         Messages that start with this string will be assumed to
         indicate the start of a trial.
 
+    ftime : bool, optional
+        Should return time column "time" as a floating point number with appropriate adjustments made (+0.5 msec) for
+        samples with the appropriate flag set (for 2000 Hz sampling rate).
+
     Returns
     -------
     samples : pandas.DataFrame
@@ -58,7 +63,17 @@ def read_edf(
     )
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
-    samples = pd.DataFrame(np.asarray(samples), columns=edf_read.sample_columns)
+    samples = pd.DataFrame(samples)
+
+    # if ftime option is set, convert time column to float and add 0.5 msec offsets if required
+    # by each row's "flag" column's bits.
+    if( True == ftime ):
+        samples = edf_read.samples_to_ftime(samples);
+        pass;
+    
+    ## Reorder samples column to be in same order as previously (based on FSAMPLE struct)
+    samples = samples[ list(edf_read.sample_columns) ];
+    
     return samples, events, messages
 
 

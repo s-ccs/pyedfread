@@ -249,11 +249,11 @@ def create_sample_array_memory(num_elements, flttype=None):
         fltbytes=sizeof(float);
         if(4==sizeof(float)):
             flttype=np.float32;
-            print("\n\n\n\nFLOATS ARE 32\n\n\n\n");
+            #print("\n\n\n\nFLOATS ARE 32\n\n\n\n");
             pass;
         elif(8==sizeof(float)):
             flttype=np.float64;
-            print("\n\n\n\nFLOATS ARE 64\n\n\n\n");
+            #print("\n\n\n\nFLOATS ARE 64\n\n\n\n");
             pass;
         else:
             raise Exception("Unsupported float type on this processor? Bytes in native C float = {}".format(fltbytes));
@@ -322,16 +322,16 @@ def parse_edf(
             fd = edf_get_float_data(ef)
             
             samples['time'][cnt] = fd.fs.time; #0
-            samples['px_left'][cnt] = float(fd.fs.px[0]); #1
-            samples['px_right'][cnt] = float(fd.fs.px[1]); #2
-            samples['py_left'][cnt] = float(fd.fs.py[0]); #3
-            samples['py_right'][cnt] = float(fd.fs.py[1]); #4
-            samples['hx_left'][cnt] = float(fd.fs.hx[0]); #5
-            samples['hx_right'][cnt] = float(fd.fs.hx[1]); #6
-            samples['hy_left'][cnt] = float(fd.fs.hy[0]); #7
-            samples['hy_right'][cnt] = float(fd.fs.hy[1]); #8
-            samples['pa_left'][cnt] = float(fd.fs.pa[0]); #9
-            samples['pa_right'][cnt] = fd.fs.pa[1]; #10   #They stopped with float() cast here, why?
+            samples['px_left'][cnt] = fd.fs.px[0]; #1
+            samples['px_right'][cnt] = fd.fs.px[1]; #2
+            samples['py_left'][cnt] = fd.fs.py[0]; #3
+            samples['py_right'][cnt] = fd.fs.py[1]; #4
+            samples['hx_left'][cnt] = fd.fs.hx[0]; #5
+            samples['hx_right'][cnt] = fd.fs.hx[1]; #6
+            samples['hy_left'][cnt] = fd.fs.hy[0]; #7
+            samples['hy_right'][cnt] = fd.fs.hy[1]; #8
+            samples['pa_left'][cnt] = fd.fs.pa[0]; #9
+            samples['pa_right'][cnt] = fd.fs.pa[1]; #10
             samples['gx_left'][cnt] = fd.fs.gx[0]; #11
             samples['gx_right'][cnt] = fd.fs.gx[1]; #12
             samples['gy_left'][cnt] = fd.fs.gy[0]; #13

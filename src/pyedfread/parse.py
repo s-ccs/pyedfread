@@ -11,6 +11,8 @@ def read_edf(
     ignore_samples=False,
     message_filter=None,
     trial_marker="TRIALID",
+    ftime=True,
+    exclude_vel_cols=True,
 ):
     """
     Parse an EDF file into a pandas.DataFrame.
@@ -39,6 +41,16 @@ def read_edf(
         Messages that start with this string will be assumed to
         indicate the start of a trial.
 
+    ftime : bool, optional (default True)
+        Should return time column "time" as a floating point number with appropriate adjustments made (+0.5 msec) for
+        samples with the appropriate flag set (for 2000 Hz sampling rate).
+
+    exclude_vel_cols : bool, optional (default True)
+        (Hopefully temporary) fix to exclude *vel* columns (actually sets values to NAN). fgxvel, gxvel_left, fgxvel_left, etc. all
+        columns containing "vel" in their string are set to NaN to avoid a seeming bug in the
+        (linux version eyelink-edfapi/stable,now 4.2.1197.0 amd64) library which leads to memory corruption in values returend by
+        edf.h edf_get_float_data()
+
     Returns
     -------
     samples : pandas.DataFrame
@@ -58,7 +70,22 @@ def read_edf(
     )
     events = pd.DataFrame(events)
     messages = pd.DataFrame(messages)
-    samples = pd.DataFrame(np.asarray(samples), columns=edf_read.sample_columns)
+    samples = pd.DataFrame(samples)
+
+    # if ftime option is set, convert time column to float and add 0.5 msec offsets if required
+    # by each row's "flag" column's bits.
+    if( True == ftime ):
+        samples = edf_read.samples_to_ftime(samples);
+        pass;
+
+    if( True == exclude_vel_cols ):
+        velcols=[ c for c in samples.columns if 'vel' in c ];
+        samples.loc[:, velcols] = np.nan;
+        pass;
+    
+    ## Reorder samples column to be in same order as previously (based on FSAMPLE struct)
+    samples = samples[ list(edf_read.sample_columns) ];
+    
     return samples, events, messages
 
 

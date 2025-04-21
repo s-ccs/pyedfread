@@ -13,7 +13,6 @@ def read_edf(
     trial_marker="TRIALID",
     ftime=True,
     exclude_vel_cols=True,
-    upgrade_dtypes=False,
 ):
     """
     Parse an EDF file into a pandas.DataFrame.
@@ -52,11 +51,6 @@ def read_edf(
         (linux version eyelink-edfapi/stable,now 4.2.1197.0 amd64) library which leads to memory corruption in values returend by
         edf.h edf_get_float_data()
 
-    upgrade_dtypes : bool, optional (default True)
-        Will convert from C-side (EDFAPI) types, e.g. native system float (usually float32), and int/uint16 to the largest (appropriate)
-        available python types, using pandas NaN-able types where appropriate. Effectively this just runs convert_dtypes() on the
-        samples dataframe before returning.
-    
     Returns
     -------
     samples : pandas.DataFrame
@@ -87,10 +81,6 @@ def read_edf(
     if( True == exclude_vel_cols ):
         velcols=[ c for c in samples.columns if 'vel' in c ];
         samples.loc[:, velcols] = np.nan;
-        pass;
-
-    if( True == upgrade_dtypes ):
-        samples = samples.convert_dtypes();
         pass;
     
     ## Reorder samples column to be in same order as previously (based on FSAMPLE struct)
